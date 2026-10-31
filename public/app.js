@@ -75,16 +75,20 @@ async function fetchScores() {
 
 // Spelare på isen / +/- per mål. Bytesdata publiceras med några minuters fördröjning,
 // så matcher med ofullständiga mål hämtas om (var 30:e s live, varannan minut annars).
+// +/- visas bara för mål i lika numerär (inte PP-, SH- eller straffslagsmål)
+const showsPlusMinus = (g) => g.strength === 'ev' && g.modifier !== 'penalty-shot';
+
 async function refreshOnIce() {
   const data = state.scores;
   if (!data) return;
   const now = Date.now();
   const due = data.games.filter((g) => {
     if (!g.goalCount || g.state === 'pre') return false;
+    if (!data.goals.some((x) => x.gameId === g.id && showsPlusMinus(x))) return false;
     const c = state.onice.get(g.id);
     if (!c) return true;
     if (c.loading) return false;
-    const incomplete = data.goals.some((x) => x.gameId === g.id && !c.goals?.[x.id]?.complete);
+    const incomplete = data.goals.some((x) => x.gameId === g.id && showsPlusMinus(x) && !c.goals?.[x.id]?.complete);
     if (!incomplete) return false;
     return now - c.at > (g.state === 'live' ? 30_000 : 120_000);
   });
@@ -330,6 +334,7 @@ function renderGoals() {
 }
 
 function onIceHtml(g) {
+  if (!showsPlusMinus(g)) return '';
   const entry = state.onice.get(g.gameId);
   if (!entry) return '';
   const c = entry.goals?.[g.id];
@@ -339,11 +344,7 @@ function onIceHtml(g) {
   const names = (list) => list.map((p) => `<span class="pn">${p.num != null ? `<i>${p.num}</i>` : ''}${esc(p.name)}</span>`).join('');
   const row = (cls, sign, team, list) =>
     `<div class="pm-row ${cls}"><b>${sign}</b><span class="pt">${esc(team)}</span><span class="pl">${names(list)}</span></div>`;
-  if (c.applies) {
-    return `<div class="pm">${row('plus', '+', c.scoringTeam, c.scoring)}${row('minus', '−', c.otherTeam, c.conceding)}</div>`;
-  }
-  const why = g.strength === 'pp' ? 'PP-mål' : g.modifier === 'penalty-shot' ? 'straffslag' : 'numerärt överläge';
-  return `<div class="pm neutral"><div class="pm-note">På isen – inget +/- (${why})</div>${row('', '·', c.scoringTeam, c.scoring)}${row('', '·', c.otherTeam, c.conceding)}</div>`;
+  return `<div class="pm">${row('plus', '+', c.scoringTeam, c.scoring)}${row('minus', '−', c.otherTeam, c.conceding)}</div>`;
 }
 
 // ---------- Render: fantasy ----------
