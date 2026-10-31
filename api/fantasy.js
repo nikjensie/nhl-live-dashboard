@@ -1,6 +1,6 @@
 import { readSession, sessionCookie, clearSessionCookie } from '../lib/session.js';
 import {
-  yf, refreshToken, parseUserLeagues, parseUserTeamKeys, parseStatCategories, parseScoreboard,
+  yf, refreshToken, appIdFromClientId, parseUserLeagues, parseUserTeamKeys, parseStatCategories, parseScoreboard,
 } from '../lib/yahoo.js';
 import { sendJson } from '../lib/http.js';
 
@@ -55,6 +55,9 @@ export default async function handler(req, res) {
     if (err.status === 401 || /token-fel/.test(err.message)) {
       res.setHeader('Set-Cookie', clearSessionCookie(req));
       return sendJson(res, 200, { loggedIn: false, configured: true, expired: true }, headers);
+    }
+    if (err.status === 403) {
+      console.error(`fantasy 403: app=${appIdFromClientId((process.env.YAHOO_CLIENT_ID || '').trim()) || '?'} token utfärdad=${session.issued_at ? new Date(session.issued_at).toISOString() : 'okänt (före diagnostik)'}`);
     }
     if (setCookies.length) res.setHeader('Set-Cookie', setCookies);
     sendJson(res, 502, { loggedIn: true, error: String(err.message || err), status: err.status || null }, headers);
