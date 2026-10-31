@@ -21,7 +21,7 @@ const state = {
   flash: new Map(),         // gameId -> { until, goal }
   newGoals: new Set(),      // id:n som ska markeras som nya i feeden
   unseenBadge: 0,
-  asc: store.get('rs.asc', true),
+  asc: store.get('rs.goalOrderAsc', false), // standard: senaste först
   tab: 'games',
 };
 
@@ -257,7 +257,7 @@ function renderGoals() {
     return;
   }
   const el = $('#goals');
-  const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 40;
+  const keep = el.scrollTop; // behåll läget – listan ska aldrig scrolla av sig själv
   el.innerHTML = goals.map((g) => {
     const sc = `${esc(g.away)} ${g.awayScore}–${g.homeScore} ${esc(g.home)}`;
     const ast = g.assists.length
@@ -279,7 +279,7 @@ function renderGoals() {
         <div class="scoreline"><span class="sc">${sc}</span>${g.clip ? `<a href="${esc(g.clip)}" target="_blank" rel="noopener">Klipp ↗</a>` : ''}</div>
       </li>`;
   }).join('');
-  if (state.asc && atBottom) el.scrollTop = el.scrollHeight;
+  el.scrollTop = keep;
 }
 
 // ---------- Render: fantasy ----------
@@ -385,7 +385,7 @@ document.querySelector('.tabbar').addEventListener('click', (e) => {
 $('#prevDate').addEventListener('click', () => state.scores && go(state.scores.prevDate));
 $('#nextDate').addEventListener('click', () => state.scores && go(state.scores.nextDate));
 $('#todayBtn').addEventListener('click', () => go(null));
-$('#sortGoals').addEventListener('click', () => { state.asc = !state.asc; store.set('rs.asc', state.asc); renderGoals(); });
+$('#sortGoals').addEventListener('click', () => { state.asc = !state.asc; store.set('rs.goalOrderAsc', state.asc); renderGoals(); });
 document.addEventListener('visibilitychange', () => { if (!document.hidden) { fetchScores(); fetchFantasy(); } });
 
 const auth = params.get('auth');
