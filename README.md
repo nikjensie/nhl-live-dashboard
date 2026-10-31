@@ -3,7 +3,7 @@
 Översikt över nattens NHL-matcher: period och klocka, spelsituation (Even Strength, Power Play, Shorthanded, tom bur), en målfeed i kronologisk ordning med målgörare och passningsläggare, och dina Yahoo Fantasy Hockey-matchups i alla ligor du är med i.
 
 - **Matcher** – pågående först, sedan kommande och avslutade. Klockan och powerplay-tiden tickar lokalt mellan uppdateringarna (var 10:e sekund när matcher pågår).
-- **Nattens mål** – alla mål från dagens matcher, senaste först (kan vändas). Nya mål blinkar på matchkortet, dyker upp som notis och markeras i feeden.
+- **Nattens mål** – alla mål från dagens matcher, senaste först (kan vändas). Nya mål blinkar på matchkortet, dyker upp som notis och markeras i feeden. Under varje mål visas vilka utespelare som var på isen och vem som fick + respektive − (powerplaymål och straffslag ger inget +/-). Uppgifterna kommer från NHL:s bytesdata, som publiceras med några minuters fördröjning.
 - **Fantasy** – logga in med Yahoo. Kategoriligor visar vinster/förluster per kategori, poängligor visar poäng och prognos.
 - **Mobil** – tre flikar längst ned: Matcher, Mål (med räknare för nya mål) och Fantasy.
 
@@ -55,6 +55,7 @@ Importera sedan repot på vercel.com (Framework preset: *Other*, inga build-inst
 
 ```
 api/scores.js          NHL: matcher + mål för en dag (cachas 5 s på Vercels edge)
+api/onice.js           NHL: spelare på isen och +/- per mål (play-by-play + shiftcharts)
 api/fantasy.js         Yahoo: din matchup i varje NHL-liga
 api/auth/*.js          Yahoo OAuth 2.0 (login, callback, logout)
 lib/nhl.js             Hämtning och tolkning av NHL-data, situationCode -> PP/SH/EV

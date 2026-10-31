@@ -1,5 +1,5 @@
 // Rinkside – frontend. Inga beroenden.
-import { demoScores, demoFantasy } from './demo.js';
+import { demoScores, demoFantasy, demoOnIce } from './demo.js';
 
 const $ = (s, el = document) => el.querySelector(s);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -26,6 +26,7 @@ const state = {
   unseenBadge: 0,
   asc: store.get('rs.goalOrderAsc', false), // standard: senaste först
   tab: 'games',
+  onice: new Map(),         // gameId -> { goals, at, loading, failed }
 };
 
 // ---------- Format ----------
@@ -61,6 +62,7 @@ async function fetchScores() {
     state.scores = data;
     state.fetchedAt = Date.now();
     renderAll();
+    refreshOnIce();
   } catch (err) {
     console.error(err);
     $('#updated').textContent = 'Kunde inte uppdatera – försöker igen';
@@ -69,6 +71,41 @@ async function fetchScores() {
     const live = state.scores?.games?.some((g) => g.state === 'live');
     fetchScores.t = setTimeout(fetchScores, DEMO ? 4_000 : live ? 10_000 : 60_000);
   }
+}
+
+// Spelare på isen / +/- per mål. Bytesdata publiceras med några minuters fördröjning,
+// så matcher med ofullständiga mål hämtas om (var 30:e s live, varannan minut annars).
+async function refreshOnIce() {
+  const data = state.scores;
+  if (!data) return;
+  const now = Date.now();
+  const due = data.games.filter((g) => {
+    if (!g.goalCount || g.state === 'pre') return false;
+    const c = state.onice.get(g.id);
+    if (!c) return true;
+    if (c.loading) return false;
+    const incomplete = data.goals.some((x) => x.gameId === g.id && !c.goals?.[x.id]?.complete);
+    if (!incomplete) return false;
+    return now - c.at > (g.state === 'live' ? 30_000 : 120_000);
+  });
+  if (!due.length) return;
+  await Promise.all(due.slice(0, 8).map(async (g) => {
+    const prev = state.onice.get(g.id);
+    state.onice.set(g.id, { ...prev, loading: true });
+    try {
+      let goals;
+      if (DEMO) goals = demoOnIce(data, g.id);
+      else {
+        const r = await fetch(`/api/onice?gameId=${g.id}`);
+        if (!r.ok) throw new Error(r.status);
+        goals = (await r.json()).goals;
+      }
+      state.onice.set(g.id, { goals, at: Date.now(), loading: false });
+    } catch {
+      state.onice.set(g.id, { goals: prev?.goals, at: Date.now(), loading: false, failed: true });
+    }
+  }));
+  if (data === state.scores) renderGoals();
 }
 
 async function fetchFantasy() {
@@ -279,10 +316,28 @@ function renderGoals() {
         </div>
         <div class="scorer">${esc(g.scorer)}${g.scorerTotal != null ? ` <span class="tot">(${g.scorerTotal})</span>` : ''} ${goalTags(g)}</div>
         <div class="assists">${ast}</div>
+        ${onIceHtml(g)}
         <div class="scoreline"><span class="sc">${sc}</span>${g.clip ? `<a href="${esc(g.clip)}" target="_blank" rel="noopener">Klipp ↗</a>` : ''}</div>
       </li>`;
   }).join('');
   el.scrollTop = keep;
+}
+
+function onIceHtml(g) {
+  const entry = state.onice.get(g.gameId);
+  if (!entry) return '';
+  const c = entry.goals?.[g.id];
+  if (!c || !c.complete) {
+    return entry.failed && !c ? '' : '<div class="pm pending">+/- väntar på bytesdata…</div>';
+  }
+  const names = (list) => list.map((p) => `<span class="pn">${p.num != null ? `<i>${p.num}</i>` : ''}${esc(p.name)}</span>`).join('');
+  const row = (cls, sign, team, list) =>
+    `<div class="pm-row ${cls}"><b>${sign}</b><span class="pt">${esc(team)}</span><span class="pl">${names(list)}</span></div>`;
+  if (c.applies) {
+    return `<div class="pm">${row('plus', '+', c.scoringTeam, c.scoring)}${row('minus', '−', c.otherTeam, c.conceding)}</div>`;
+  }
+  const why = g.strength === 'pp' ? 'PP-mål' : g.modifier === 'penalty-shot' ? 'straffslag' : 'numerärt överläge';
+  return `<div class="pm neutral"><div class="pm-note">På isen – inget +/- (${why})</div>${row('', '·', c.scoringTeam, c.scoring)}${row('', '·', c.otherTeam, c.conceding)}</div>`;
 }
 
 // ---------- Render: fantasy ----------

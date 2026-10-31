@@ -101,3 +101,33 @@ export function demoFantasy() {
     ],
   };
 }
+
+// Påhittade femmor för demoläget
+const LINES = {
+  TOR: [[34, 'Matthews'], [16, 'Marner'], [88, 'Nylander'], [44, 'Rielly'], [8, 'Ekman-Larsson']],
+  BOS: [[88, 'Pastrnak'], [28, 'Lindholm'], [63, 'Marchand'], [73, 'McAvoy'], [27, 'Lohrei']],
+  EDM: [[97, 'McDavid'], [29, 'Draisaitl'], [18, 'Hyman'], [2, 'Bouchard'], [25, 'Nurse'], [93, 'Nugent-Hopkins']],
+  COL: [[29, 'MacKinnon'], [8, 'Makar'], [92, 'Landeskog'], [16, 'Toews'], [49, 'Girard']],
+  VGK: [[9, 'Eichel'], [61, 'Stone'], [27, 'Theodore'], [7, 'Pietrangelo'], [26, 'Hertl']],
+  SEA: [[10, 'Beniers'], [7, 'Eberle'], [6, 'Dunn'], [4, 'Larsson'], [20, 'Schwartz']],
+  NYR: [[93, 'Zibanejad'], [10, 'Panarin'], [23, 'Fox'], [16, 'Trocheck'], [79, 'Miller']],
+  DET: [[23, 'Raymond'], [53, 'Seider'], [71, 'Larkin'], [39, 'Copp'], [24, 'Chiarot']],
+};
+
+export function demoOnIce(scores, gameId) {
+  const out = {};
+  for (const g of scores.goals.filter((x) => x.gameId === gameId)) {
+    const other = g.team === g.away ? g.home : g.away;
+    const five = (abbr, n) => (LINES[abbr] || []).slice(0, n).map(([num, name], i) => ({ id: i, num, name }));
+    const pp = g.strength === 'pp';
+    out[g.id] = {
+      applies: !pp,
+      complete: !(gameId === 3), // matchen med "nytt" mål väntar på bytesdata
+      scoringTeam: g.team,
+      otherTeam: other,
+      scoring: five(g.team, g.modifier === 'empty-net' ? 6 : 5),
+      conceding: five(other, pp || g.strength === 'sh' ? 4 : 5),
+    };
+  }
+  return out;
+}
