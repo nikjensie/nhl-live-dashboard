@@ -75,8 +75,8 @@ async function fetchScores() {
 
 // Spelare på isen / +/- per mål. Bytesdata publiceras med några minuters fördröjning,
 // så matcher med ofullständiga mål hämtas om (var 30:e s live, varannan minut annars).
-// +/- visas bara för mål i lika numerär (inte PP-, SH- eller straffslagsmål)
-const showsPlusMinus = (g) => g.strength === 'ev' && g.modifier !== 'penalty-shot';
+// +/- visas för mål i lika numerär och i boxplay – inte för PP- eller straffslagsmål (NHL:s regler)
+const showsPlusMinus = (g) => g.strength !== 'pp' && g.modifier !== 'penalty-shot';
 
 async function refreshOnIce() {
   const data = state.scores;
