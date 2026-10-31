@@ -132,6 +132,18 @@ img { display: block; }
 .g-period .clock { font: 700 26px/1 var(--num); font-variant-numeric: tabular-nums; letter-spacing: .02em; }
 .g-period .clock.stopped { color: var(--muted); }
 .g-period .intermission { color: var(--goal); font: 700 15px/1 var(--num); letter-spacing: .06em; text-transform: uppercase; }
+.g-top { justify-content: flex-start; gap: 10px; }
+.g-top .g-state { margin-left: auto; }
+.g-nhl {
+  position: relative; z-index: 3; flex: none;
+  display: inline-flex; align-items: center; gap: 3px;
+  padding: 3px 5px; margin: -3px -5px -3px 0; border-radius: 8px;
+  color: var(--muted); text-decoration: none; font-size: 11px; font-weight: 700;
+  opacity: .75; transition: opacity .15s, background .15s;
+}
+.g-nhl:hover, .g-nhl:focus-visible { opacity: 1; background: var(--card-2); color: var(--text); }
+.g-nhl img { width: 22px; height: 22px; }
+.g-nhl .ext { width: 9px; height: 9px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; }
 .g-state { display: inline-flex; align-items: center; gap: 6px; text-transform: uppercase; letter-spacing: .08em; font-size: 11px; }
 .g-state.live { color: var(--live); }
 

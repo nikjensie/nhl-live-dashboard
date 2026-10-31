@@ -249,6 +249,12 @@ function gameCard(g) {
     foot = `<div class="g-last"><span class="gl-ico"></span><span>Senast: <b>${esc(lg.scorer)}</b>${ast} · ${esc(lg.team)} ${esc(periodLabel(lg.period, lg.periodType))} ${esc(lg.timeInPeriod)}</span></div>`;
   }
 
+  // Länk till matchen på NHL.com (NHL-loggan, med text som reserv om bilden inte laddas)
+  const gcUrl = g.gameCenter || `https://www.nhl.com/gamecenter/${g.id}`;
+  const nhl = `<a class="g-nhl" href="${esc(gcUrl)}" target="_blank" rel="noopener" title="Öppna matchen på NHL.com" aria-label="Öppna matchen på NHL.com">
+      <img src="https://assets.nhle.com/logos/nhl/svg/NHL_dark.svg" alt="" onerror="this.hidden=true;this.nextElementSibling.hidden=false">
+      <span hidden>NHL.com</span><svg class="ext" viewBox="0 0 12 12" aria-hidden="true"><path d="M4.5 2.5h5v5M9.5 2.5l-7 7"/></svg></a>`;
+
   const fl = state.flash.get(g.id);
   let banner = '';
   if (fl && fl.until > Date.now()) {
@@ -259,7 +265,7 @@ function gameCard(g) {
 
   return `
     <article class="game ${g.state} ${banner ? 'goal-flash' : ''}">
-      <div class="g-top">${top}</div>
+      <div class="g-top">${top}${nhl}</div>
       <div class="g-teams">${teamRow(g.away, g.home, g)}${teamRow(g.home, g.away, g)}</div>
       ${sit}${foot}${banner}
     </article>`;
