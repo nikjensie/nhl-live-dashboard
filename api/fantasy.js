@@ -57,6 +57,6 @@ export default async function handler(req, res) {
       return sendJson(res, 200, { loggedIn: false, configured: true, expired: true }, headers);
     }
     if (setCookies.length) res.setHeader('Set-Cookie', setCookies);
-    sendJson(res, 502, { loggedIn: true, error: String(err.message || err) }, headers);
+    sendJson(res, 502, { loggedIn: true, error: String(err.message || err), status: err.status || null }, headers);
   }
 }

@@ -304,7 +304,13 @@ function renderFantasy() {
       : `<div class="login-card"><p>Yahoo-inloggning är inte konfigurerad. Lägg in YAHOO_CLIENT_ID, YAHOO_CLIENT_SECRET och SESSION_SECRET (se README).</p></div>`;
     return;
   }
-  if (f.error) { el.innerHTML = `<div class="login-card"><p>Kunde inte hämta fantasydata: ${esc(f.error)}</p></div>`; return; }
+  if (f.error) {
+    const hint = f.status === 403
+      ? '<p>Yahoo nekade åtkomst. Kontrollera att din Yahoo-app har behörigheten <b>Fantasy Sports – Read</b>, logga sedan ut och in igen.</p>'
+      : '';
+    el.innerHTML = `<div class="login-card"><p>Kunde inte hämta fantasydata: ${esc(f.error)}</p>${hint}<a class="btn ghost" href="/api/auth/logout">Logga ut</a></div>`;
+    return;
+  }
   if (!f.leagues?.length) { el.innerHTML = `<div class="empty">Inga NHL-ligor hittades på ditt Yahoo-konto den här säsongen.</div>`; return; }
 
   el.innerHTML = f.leagues.map((lg) => {
