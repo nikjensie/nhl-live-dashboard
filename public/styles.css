@@ -295,6 +295,15 @@ img { display: block; }
   .badge { position: absolute; top: 7px; left: calc(50% + 6px); min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; background: var(--goal); color: #111; font: 700 11px/18px var(--sans); }
 }
 
+/* ---------- Yahoo-delen dold ---------- */
+body.no-fantasy .panel-fantasy,
+body.no-fantasy .tabbar [data-tab="fantasy"],
+body.no-fantasy #account { display: none !important; }
+body.no-fantasy .layout { grid-template-columns: minmax(0, 1fr) 380px; }
+@media (max-width: 900px) {
+  body.no-fantasy .tabbar { grid-template-columns: repeat(2, 1fr); }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; transition: none !important; }
 }

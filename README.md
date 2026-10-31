@@ -9,6 +9,8 @@
 
 Testa utseendet utan pågående matcher: öppna `/?demo`.
 
+> **Fantasy-delen är dold tills vidare.** Yahoo kräver sedan juli 2026 att appar godkänns för Fantasy-API:et (ansökan: <https://sports.yahoo.com/developer/access/>). Innan dess svarar API:et 403. Visa delen med `/?fantasy` (eller `/?demo&fantasy`).
+
 ## Kom igång lokalt
 
 Kräver Node 18+. Inga npm-beroenden.

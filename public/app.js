@@ -5,6 +5,9 @@ const $ = (s, el = document) => el.querySelector(s);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const params = new URLSearchParams(location.search);
 const DEMO = params.has('demo');
+// Yahoo-delen är dold tills Yahoo godkänt appen för Fantasy-API:et. Visa den med ?fantasy
+const FANTASY = params.has('fantasy');
+if (!FANTASY) document.body.classList.add('no-fantasy');
 
 const store = {
   get(k, d) { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch { return d; } },
@@ -392,7 +395,7 @@ $('#prevDate').addEventListener('click', () => state.scores && go(state.scores.p
 $('#nextDate').addEventListener('click', () => state.scores && go(state.scores.nextDate));
 $('#todayBtn').addEventListener('click', () => go(null));
 $('#sortGoals').addEventListener('click', () => { state.asc = !state.asc; store.set('rs.goalOrderAsc', state.asc); renderGoals(); });
-document.addEventListener('visibilitychange', () => { if (!document.hidden) { fetchScores(); fetchFantasy(); } });
+document.addEventListener('visibilitychange', () => { if (!document.hidden) { fetchScores(); if (FANTASY) fetchFantasy(); } });
 
 const auth = params.get('auth');
 if (auth) {
@@ -408,5 +411,5 @@ if (auth) {
 
 $('#games').innerHTML = `<div class="empty">Laddar…</div>`;
 fetchScores();
-fetchFantasy();
+if (FANTASY) fetchFantasy();
 setInterval(tick, 1000);
