@@ -1,0 +1,14 @@
+{
+  "name": "nhl-live-dashboard",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Live-dashboard för pågående NHL-matcher med spelsituation, målfeed och Yahoo Fantasy Hockey-matchups.",
+  "type": "module",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "dev": "node dev-server.js",
+    "test": "node --test test/*.test.js"
+  }
+}

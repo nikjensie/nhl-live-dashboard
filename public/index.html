@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="sv">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0b0f14">
+  <title>Rinkside – NHL live</title>
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body data-tab="games">
+  <header class="topbar">
+    <div class="brand">
+      <img src="icon.svg" alt="" width="28" height="28">
+      <span>Rinkside</span>
+    </div>
+    <nav class="datenav" aria-label="Datum">
+      <button id="prevDate" class="iconbtn" aria-label="Föregående dag">‹</button>
+      <button id="todayBtn" class="datelabel" title="Gå till idag">Idag</button>
+      <button id="nextDate" class="iconbtn" aria-label="Nästa dag">›</button>
+    </nav>
+    <div class="topright">
+      <span id="liveCount" class="livecount" hidden></span>
+      <span id="updated" class="updated"></span>
+      <div id="account"></div>
+    </div>
+  </header>
+
+  <main class="layout">
+    <section class="panel panel-games" id="panel-games" aria-label="Matcher">
+      <div class="panel-head">
+        <h2>Matcher</h2>
+        <div class="legend">
+          <span class="chip ev">Even Strength</span>
+          <span class="chip pp">Power Play</span>
+          <span class="chip sh">Shorthanded</span>
+          <span class="chip en">Tom bur</span>
+        </div>
+      </div>
+      <div id="games" class="games"></div>
+    </section>
+
+    <aside class="side">
+      <section class="panel panel-goals" id="panel-goals" aria-label="Nattens mål">
+        <div class="panel-head">
+          <h2>Nattens mål <span id="goalTotal" class="count"></span></h2>
+          <button id="sortGoals" class="textbtn" title="Byt sorteringsordning">Äldst först</button>
+        </div>
+        <ol id="goals" class="goals"></ol>
+      </section>
+
+      <section class="panel panel-fantasy" id="panel-fantasy" aria-label="Fantasy">
+        <div class="panel-head">
+          <h2>Fantasy-matchups</h2>
+        </div>
+        <div id="fantasy" class="fantasy"></div>
+      </section>
+    </aside>
+  </main>
+
+  <nav class="tabbar" aria-label="Vyer">
+    <button data-tab="games" class="active">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="5"/><line x1="12" y1="5" x2="12" y2="19"/></svg>Matcher
+    </button>
+    <button data-tab="goals">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 20V9l7-5 7 5v11"/><path d="M5 13h14M5 17h14M9 9v11M15 9v11"/></svg>Mål<span id="goalBadge" class="badge" hidden></span>
+    </button>
+    <button data-tab="fantasy">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/></svg>Fantasy
+    </button>
+  </nav>
+
+  <div id="toasts" class="toasts" aria-live="polite"></div>
+
+  <script src="app.js" type="module"></script>
+</body>
+</html>
