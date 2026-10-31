@@ -19,8 +19,13 @@
     </div>
     <nav class="datenav" aria-label="Datum">
       <button id="prevDate" class="iconbtn" aria-label="Föregående dag">‹</button>
-      <button id="todayBtn" class="datelabel" title="Gå till idag">Idag</button>
+      <label class="datelabel" title="Välj dag">
+        <svg class="cal" viewBox="0 0 16 16" aria-hidden="true"><rect x="2" y="3" width="12" height="11" rx="2"/><path d="M2 7h12M5 1.5v3M11 1.5v3"/></svg>
+        <span id="dateText">Idag</span>
+        <input type="date" id="datePick" aria-label="Välj dag">
+      </label>
       <button id="nextDate" class="iconbtn" aria-label="Nästa dag">›</button>
+      <button id="todayBtn" class="todaybtn" hidden>Idag</button>
     </nav>
     <div class="topright">
       <span id="liveCount" class="livecount" hidden></span>

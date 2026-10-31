@@ -50,6 +50,7 @@ function liveSecs(base, running) {
 
 // ---------- Data ----------
 async function fetchScores() {
+  const forDate = state.date;
   try {
     let data;
     if (DEMO) data = demoScores();
@@ -58,6 +59,8 @@ async function fetchScores() {
       if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || r.status);
       data = await r.json();
     }
+    if (forDate !== state.date) return; // användaren har bytt dag under tiden
+    if (!state.date) state.today = data.date;
     detectNewGoals(data);
     state.scores = data;
     state.fetchedAt = Date.now();
@@ -168,8 +171,9 @@ function renderHeader() {
   const lc = $('#liveCount');
   lc.hidden = !live;
   lc.textContent = `${live} live`;
-  $('#todayBtn').textContent = !state.date ? 'Idag' : dayFmt.format(new Date(`${d.date}T12:00:00`));
-  $('#todayBtn').title = d.date;
+  $('#dateText').textContent = !state.date ? 'Idag' : dayFmt.format(new Date(`${d.date}T12:00:00`));
+  $('#datePick').value = d.date;
+  $('#todayBtn').hidden = !state.date;
   $('#updated').textContent = `Uppdaterad ${new Date(state.fetchedAt).toLocaleTimeString('sv-SE')}`;
   const total = d.goals.length;
   $('#goalTotal').textContent = total ? `(${total})` : '';
@@ -442,10 +446,15 @@ function setTab(tab) {
 }
 
 function go(date) {
+  if (!date || date === state.today) date = null;
   state.date = date;
   state.seen = null;
   state.scores = null;
   $('#games').innerHTML = `<div class="empty">Laddar…</div>`;
+  $('#goals').innerHTML = '';
+  $('#goalTotal').textContent = '';
+  $('#dateText').textContent = date ? dayFmt.format(new Date(`${date}T12:00:00`)) : 'Idag';
+  $('#todayBtn').hidden = !date;
   fetchScores();
 }
 
@@ -456,6 +465,10 @@ document.querySelector('.tabbar').addEventListener('click', (e) => {
 $('#prevDate').addEventListener('click', () => state.scores && go(state.scores.prevDate));
 $('#nextDate').addEventListener('click', () => state.scores && go(state.scores.nextDate));
 $('#todayBtn').addEventListener('click', () => go(null));
+const picker = $('#datePick');
+// Öppna kalendern direkt vid klick (desktop-Chrome öppnar annars bara via ikonen)
+picker.addEventListener('click', () => { try { picker.showPicker?.(); } catch {} });
+picker.addEventListener('change', () => { if (picker.value) go(picker.value); });
 $('#sortGoals').addEventListener('click', () => { state.asc = !state.asc; store.set('rs.goalOrderAsc', state.asc); renderGoals(); });
 document.addEventListener('visibilitychange', () => { if (!document.hidden) { fetchScores(); if (FANTASY) fetchFantasy(); } });
 
