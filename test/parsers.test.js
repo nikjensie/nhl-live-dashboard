@@ -259,3 +259,25 @@ test('stateOf: OVER (strax efter slutsignalen) räknas som avslutad, inte komman
   assert.equal(stateOf('NAGOT_NYTT', 2), 'live');
   assert.equal(stateOf('NAGOT_NYTT'), 'pre');
 });
+
+import { normalizeBoxscore } from '../api/boxscore.js';
+test('normalizeBoxscore: officiell +/-, istid och skott per utespelare, målvakter exkluderade', () => {
+  const d = {
+    id: 2026020218, gameState: 'OFF',
+    awayTeam: { abbrev: 'STL' }, homeTeam: { abbrev: 'DET' },
+    playerByGameStats: {
+      awayTeam: {
+        forwards: [{ playerId: 1, sweaterNumber: 21, name: { default: 'J. Snuggerud' }, position: 'R', goals: 1, assists: 1, points: 2, plusMinus: 2, sog: 1, toi: '18:59' }],
+        defense: [{ playerId: 2, sweaterNumber: 6, name: { default: 'P. Broberg' }, position: 'D', goals: 0, assists: 0, points: 0, plusMinus: -1, sog: 2, toi: '22:10' }],
+        goalies: [{ playerId: 3, name: { default: 'J. Binnington' } }],
+      },
+      homeTeam: { forwards: [], defense: [], goalies: [] },
+    },
+  };
+  const b = normalizeBoxscore(d);
+  assert.equal(b.away.abbrev, 'STL');
+  assert.equal(b.away.skaters.length, 2);
+  assert.deepEqual(b.away.skaters[0], { id: 1, num: 21, name: 'J. Snuggerud', pos: 'R', g: 1, a: 1, p: 2, pm: 2, sog: 1, toi: '18:59', toiSec: 1139 });
+  assert.equal(b.away.skaters[1].pm, -1);
+  assert.equal(b.home.skaters.length, 0);
+});

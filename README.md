@@ -2,7 +2,7 @@
 
 Översikt över nattens NHL-matcher: period och klocka, spelsituation (Even Strength, Power Play, Shorthanded, tom bur), en målfeed i kronologisk ordning med målgörare och passningsläggare, och dina Yahoo Fantasy Hockey-matchups i alla ligor du är med i.
 
-- **Matcher** – pågående först, sedan kommande och avslutade. Tryck på ett matchkort för en boxscore med resultat per period, skott, alla mål med assist och en poängliga per lag med +/-. Klockan och powerplay-tiden tickar lokalt mellan uppdateringarna (var 10:e sekund när matcher pågår).
+- **Matcher** – pågående först, sedan kommande och avslutade. Tryck på ett matchkort för en boxscore med resultat per period, skott, alla mål med assist och NHL:s officiella spelarstatistik per lag (mål, assist, poäng, +/-, skott, istid). Klockan och powerplay-tiden tickar lokalt mellan uppdateringarna (var 10:e sekund när matcher pågår).
 - **Radio** – lagloggorna i matchkortets topprad startar lagets egen radiosändning (samma strömmar som NHL.com använder). Ljudet spelas i en liten spelare längst ned; Safari spelar strömmen direkt, övriga webbläsare via hls.js (`public/vendor/`, Apache-2.0). Länkarna finns medan matchen pågår (`api/radio.js`).
 - **Nattens mål** – alla mål från dagens matcher, senaste först (kan vändas). Nya mål blinkar på matchkortet, dyker upp som notis och markeras i feeden. Med högtalarknappen i toppen spelas ett målhorn i arenastil (syntetiserat i webbläsaren). Under varje mål i lika numerär eller boxplay visas vilka utespelare som var på isen och vem som fick + respektive − (inte för PP- eller straffslagsmål, enligt NHL:s regler). Uppgifterna kommer från NHL:s bytesdata, som publiceras med några minuters fördröjning.
 - **Fantasy** – logga in med Yahoo. Kategoriligor visar vinster/förluster per kategori, poängligor visar poäng och prognos. Spelare i ditt lag markeras **orange** och motståndarens **ljusblå** överallt i appen (målfeed, +/-, boxscore, notiser), med ligatagg om du är med i flera ligor. Bänk- och IR-spelare får streckad markering. "Bara matchups" i målkolumnen filtrerar fram mål som berör dina matchups. Yahoo och NHL har olika spelar-ID, så kopplingen görs på lag + efternamn + förnamnsinitial (`public/marks.js`).
@@ -59,6 +59,7 @@ api/scores.js          NHL: matcher + mål för en dag (cachas 5 s på Vercels e
 lib/espn.js            Riktiga klockslag för mål från ESPN
 api/onice.js           NHL: spelare på isen och +/- per mål (play-by-play + shiftcharts)
 api/radio.js           NHL: lagens radiosändningar (HLS) för en match
+api/boxscore.js        NHL: officiell spelarstatistik (+/-, istid, skott) för boxscoren
 api/fantasy.js         Yahoo: din matchup i varje NHL-liga
 api/auth/*.js          Yahoo OAuth 2.0 (login, callback, logout)
 lib/nhl.js             Hämtning och tolkning av NHL-data, situationCode -> PP/SH/EV

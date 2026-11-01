@@ -31,7 +31,9 @@ const state = {
   tab: 'games',
   marks: buildIndex(null),   // fantasyspelare (Yahoo-trupper)
   onlyMine: store.get('rs.onlyMine', false),
-  onice: new Map(),         // gameId -> { goals, at, loading, failed }
+  onice: new Map(),
+  boxData: new Map(),        // gameId -> { at, data, loading } – NHL:s officiella boxscore
+  boxAll: false,             // visa alla utespelare i boxscoren         // gameId -> { goals, at, loading, failed }
 };
 
 // ---------- Format ----------
@@ -470,6 +472,22 @@ function openBox(id) {
   $('.box-close').focus();
 }
 
+async function ensureBoxData(g) {
+  if ((DEMO && !params.has('boxtest')) || g.state === 'pre') return;
+  const c = state.boxData.get(g.id);
+  const stale = !c || (!c.loading && (g.state === 'live' ? Date.now() - c.at > 20_000 : !c.data && Date.now() - c.at > 20_000));
+  if (!stale) return;
+  state.boxData.set(g.id, { ...c, at: Date.now(), loading: true });
+  try {
+    const r = await fetch(`/api/boxscore?gameId=${g.id}`);
+    if (!r.ok) throw new Error(r.status);
+    state.boxData.set(g.id, { at: Date.now(), data: await r.json(), loading: false });
+  } catch {
+    state.boxData.set(g.id, { at: Date.now(), data: c?.data, loading: false });
+  }
+  if (state.boxId === g.id) renderBox();
+}
+
 function closeBox() {
   state.boxId = null;
   $('#box').hidden = true;
@@ -581,6 +599,30 @@ function renderBox() {
     : pmMissing === pmGoals ? '<p class="pm-foot">+/- visas när NHL:s bytesdata finns (några minuters fördröjning).</p>'
     : pmMissing ? `<p class="pm-foot">+/- saknar ännu ${pmMissing} mål – bytesdata kommer med några minuters fördröjning.</p>` : '';
 
+  // NHL:s officiella spelarstatistik (plusMinus, istid, skott). Egen uträkning ovan används som reserv.
+  ensureBoxData(g);
+  const official = state.boxData.get(g.id)?.data;
+  const officialTable = (t, side) => {
+    const sk = official[side]?.skaters || [];
+    const rows = sk.filter((p) => state.boxAll || p.p > 0 || p.pm !== 0)
+      .sort((a, b) => b.p - a.p || b.g - a.g || b.pm - a.pm || b.toiSec - a.toiSec);
+    return `
+      <div class="pts">
+        <div class="pts-h">${logo(t)}<span>${esc(t.name)}</span></div>
+        ${rows.length ? `<table class="off"><thead><tr><th></th><th>M</th><th>A</th><th>P</th><th>+/-</th><th class="c-sog">S</th><th class="c-toi">Istid</th></tr></thead><tbody>
+          ${rows.map((r) => `<tr><td>${r.num != null ? `<i class="num">${r.num}</i>` : ''}${pn(t.abbrev, r.name)}</td><td>${r.g}</td><td>${r.a}</td><td class="p">${r.p}</td>
+            <td class="pm ${r.pm > 0 ? 'pos' : r.pm < 0 ? 'neg' : ''}">${fmtPm(r.pm)}</td><td class="c-sog">${r.sog}</td><td class="c-toi">${esc(r.toi || '–')}</td></tr>`).join('')}
+        </tbody></table>` : '<div class="none">Inga poäng eller +/- än</div>'}
+      </div>`;
+  };
+  const ptsHtml = official
+    ? `${officialTable(g.away, 'away')}${officialTable(g.home, 'home')}`
+    : `${ptsTable(g.away)}${ptsTable(g.home)}`;
+  const total = official ? (official.away?.skaters?.length || 0) + (official.home?.skaters?.length || 0) : 0;
+  const footNote = official
+    ? `<p class="pm-foot">Officiell statistik från NHL. <button class="textbtn" data-boxall>${state.boxAll ? 'Visa bara spelare med poäng eller +/-' : `Visa alla ${total} utespelare`}</button></p>`
+    : pmNote;
+
   const gcUrl = g.gameCenter || `https://www.nhl.com/gamecenter/${g.id}`;
   $('#boxBody').innerHTML = `
     <header class="box-head">
@@ -593,8 +635,8 @@ function renderBox() {
     </header>
     ${line}
     <section class="box-goals">${goalList || '<p class="none">Inga mål än.</p>'}</section>
-    <section class="box-pts">${ptsTable(g.away)}${ptsTable(g.home)}</section>
-    ${pmNote}
+    <section class="box-pts">${ptsHtml}</section>
+    ${footNote}
     <a class="box-gc" href="${esc(gcUrl)}" target="_blank" rel="noopener">Hela matchen på NHL.com ↗</a>`;
 }
 
@@ -771,7 +813,10 @@ $('#games').addEventListener('keydown', (e) => {
   const card = e.target.closest('.game[data-id]');
   if (card && !card.classList.contains('pre')) { e.preventDefault(); openBox(Number(card.dataset.id)); }
 });
-$('#box').addEventListener('click', (e) => { if (e.target.closest('[data-close]')) closeBox(); });
+$('#box').addEventListener('click', (e) => {
+  if (e.target.closest('[data-close]')) closeBox();
+  else if (e.target.closest('[data-boxall]')) { state.boxAll = !state.boxAll; renderBox(); }
+});
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && state.boxId) closeBox(); });
 
 $('#onlyMine').addEventListener('click', () => { state.onlyMine = !state.onlyMine; store.set('rs.onlyMine', state.onlyMine); renderGoals(); });
