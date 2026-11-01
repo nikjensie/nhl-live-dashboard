@@ -113,7 +113,7 @@ async function refreshOnIce() {
       state.onice.set(g.id, { goals: prev?.goals, at: Date.now(), loading: false, failed: true });
     }
   }));
-  if (data === state.scores) renderGoals();
+  if (data === state.scores) { renderGoals(); renderBox(); }
 }
 
 async function fetchFantasy() {
@@ -488,31 +488,48 @@ function renderBox() {
     return `<h3>${name}</h3><ol class="bgoals">${items}</ol>`;
   }).join('');
 
-  // Poängliga per lag
+  // Poängliga per lag, med +/- från bytesdatan (samma källa som målkolumnen)
   const pts = new Map();
-  const add = (team, key, name, field) => {
-    const k = `${team}|${key || name}`;
-    const r = pts.get(k) || { team, name, g: 0, a: 0 };
-    r[field]++;
-    pts.set(k, r);
+  // Nyckel: spelar-ID om det finns, annars efternamn (demo/äldre data)
+  const keyOf = (team, id, name) => `${team}|${id ?? String(name).split(' ').pop().toLowerCase()}`;
+  const row = (team, id, name) => {
+    const k = keyOf(team, id, name);
+    if (!pts.has(k)) pts.set(k, { team, name, g: 0, a: 0, pm: 0, hasPm: false });
+    return pts.get(k);
   };
   for (const x of goals) {
     // Samma namnform som assistnamnen ("A. Matthews"), så att spelaren hamnar på en rad
     const short = x.scorerShort || x.scorer.replace(/^(\S)\S*\s+/, '$1. ');
-    add(x.team, x.scorerId, short, 'g');
-    for (const a of x.assists) add(x.team, a.playerId, a.name, 'a');
+    row(x.team, x.scorerId, short).g++;
+    for (const a of x.assists) row(x.team, a.playerId, a.name).a++;
   }
+  const oi = state.onice.get(g.id)?.goals || {};
+  let pmGoals = 0, pmMissing = 0;
+  for (const x of goals) {
+    if (!showsPlusMinus(x)) continue;
+    pmGoals++;
+    const c = oi[x.id];
+    if (!c?.complete || !c.applies) { pmMissing++; continue; }
+    for (const p of c.scoring) { const r = row(c.scoringTeam, p.id, p.short || p.name); r.pm++; r.hasPm = true; }
+    for (const p of c.conceding) { const r = row(c.otherTeam, p.id, p.short || p.name); r.pm--; r.hasPm = true; }
+  }
+  const showPm = pmGoals > 0 && pmMissing < pmGoals;
+  const fmtPm = (n) => (n > 0 ? `+${n}` : n < 0 ? `−${-n}` : '0');
   const ptsTable = (t) => {
-    const rows = [...pts.values()].filter((r) => r.team === t.abbrev)
-      .sort((a, b) => (b.g + b.a) - (a.g + a.a) || b.g - a.g || a.name.localeCompare(b.name));
+    const rows = [...pts.values()].filter((r) => r.team === t.abbrev && (r.g + r.a > 0 || (showPm && r.pm !== 0)))
+      .sort((a, b) => (b.g + b.a) - (a.g + a.a) || b.g - a.g || b.pm - a.pm || a.name.localeCompare(b.name));
     return `
       <div class="pts">
         <div class="pts-h">${logo(t)}<span>${esc(t.name)}</span></div>
-        ${rows.length ? `<table><thead><tr><th></th><th>M</th><th>A</th><th>P</th></tr></thead><tbody>
-          ${rows.map((r) => `<tr><td>${esc(r.name)}</td><td>${r.g}</td><td>${r.a}</td><td class="p">${r.g + r.a}</td></tr>`).join('')}
+        ${rows.length ? `<table><thead><tr><th></th><th>M</th><th>A</th><th>P</th>${showPm ? '<th>+/-</th>' : ''}</tr></thead><tbody>
+          ${rows.map((r) => `<tr><td>${esc(r.name)}</td><td>${r.g}</td><td>${r.a}</td><td class="p">${r.g + r.a}</td>${showPm
+            ? `<td class="pm ${r.pm > 0 ? 'pos' : r.pm < 0 ? 'neg' : ''}">${fmtPm(r.pm)}</td>` : ''}</tr>`).join('')}
         </tbody></table>` : '<div class="none">Inga poäng</div>'}
       </div>`;
   };
+  const pmNote = pmGoals === 0 ? ''
+    : pmMissing === pmGoals ? '<p class="pm-foot">+/- visas när NHL:s bytesdata finns (några minuters fördröjning).</p>'
+    : pmMissing ? `<p class="pm-foot">+/- saknar ännu ${pmMissing} mål – bytesdata kommer med några minuters fördröjning.</p>` : '';
 
   const gcUrl = g.gameCenter || `https://www.nhl.com/gamecenter/${g.id}`;
   $('#boxBody').innerHTML = `
@@ -527,6 +544,7 @@ function renderBox() {
     ${line}
     <section class="box-goals">${goalList || '<p class="none">Inga mål än.</p>'}</section>
     <section class="box-pts">${ptsTable(g.away)}${ptsTable(g.home)}</section>
+    ${pmNote}
     <a class="box-gc" href="${esc(gcUrl)}" target="_blank" rel="noopener">Hela matchen på NHL.com ↗</a>`;
 }
 

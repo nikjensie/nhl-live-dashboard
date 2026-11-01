@@ -345,6 +345,10 @@ body.box-open { overflow: hidden; }
 .pts td { padding: 3px 0; text-align: right; color: var(--muted); }
 .pts td:first-child { text-align: left; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 0; width: 100%; }
 .pts td.p { color: var(--text); font-weight: 700; padding-left: 10px; }
+.pts td.pm { padding-left: 10px; font-weight: 600; min-width: 30px; }
+.pts td.pm.pos { color: var(--pp); }
+.pts td.pm.neg { color: var(--sh); }
+.pm-foot { margin: 8px 2px 0; color: var(--dim); font-size: 11px; }
 .box-gc { display: block; text-align: center; margin-top: 16px; color: var(--accent); font-weight: 600; font-size: 13px; text-decoration: none; }
 .box-gc:hover { text-decoration: underline; }
 

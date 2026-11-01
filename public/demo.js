@@ -118,7 +118,7 @@ export function demoOnIce(scores, gameId) {
   const out = {};
   for (const g of scores.goals.filter((x) => x.gameId === gameId)) {
     const other = g.team === g.away ? g.home : g.away;
-    const five = (abbr, n) => (LINES[abbr] || []).slice(0, n).map(([num, name], i) => ({ id: i, num, name }));
+    const five = (abbr, n) => (LINES[abbr] || []).slice(0, n).map(([num, name]) => ({ id: null, num, name, short: name }));
     const pp = g.strength === 'pp';
     out[g.id] = {
       applies: !pp,

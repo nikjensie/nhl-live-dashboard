@@ -2,7 +2,7 @@
 
 Översikt över nattens NHL-matcher: period och klocka, spelsituation (Even Strength, Power Play, Shorthanded, tom bur), en målfeed i kronologisk ordning med målgörare och passningsläggare, och dina Yahoo Fantasy Hockey-matchups i alla ligor du är med i.
 
-- **Matcher** – pågående först, sedan kommande och avslutade. Tryck på ett matchkort för en boxscore med resultat per period, skott, alla mål med assist och en poängliga per lag. Klockan och powerplay-tiden tickar lokalt mellan uppdateringarna (var 10:e sekund när matcher pågår).
+- **Matcher** – pågående först, sedan kommande och avslutade. Tryck på ett matchkort för en boxscore med resultat per period, skott, alla mål med assist och en poängliga per lag med +/-. Klockan och powerplay-tiden tickar lokalt mellan uppdateringarna (var 10:e sekund när matcher pågår).
 - **Nattens mål** – alla mål från dagens matcher, senaste först (kan vändas). Nya mål blinkar på matchkortet, dyker upp som notis och markeras i feeden. Med högtalarknappen i toppen spelas ett målhorn i arenastil (syntetiserat i webbläsaren). Under varje mål i lika numerär eller boxplay visas vilka utespelare som var på isen och vem som fick + respektive − (inte för PP- eller straffslagsmål, enligt NHL:s regler). Uppgifterna kommer från NHL:s bytesdata, som publiceras med några minuters fördröjning.
 - **Fantasy** – logga in med Yahoo. Kategoriligor visar vinster/förluster per kategori, poängligor visar poäng och prognos.
 - **Mobil** – tre flikar längst ned: Matcher, Mål (med räknare för nya mål) och Fantasy.
