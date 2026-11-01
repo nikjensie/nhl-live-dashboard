@@ -67,6 +67,14 @@ img { display: block; }
 .todaybtn { height: 32px; padding: 0 12px; border-radius: 999px; font-size: 12px; font-weight: 700; color: var(--accent); }
 .todaybtn:hover { background: var(--card-2); }
 .topright { display: flex; align-items: center; gap: 14px; }
+.soundbtn { display: inline-flex; align-items: center; justify-content: center; position: relative; }
+.soundbtn svg { width: 19px; height: 19px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linejoin: round; stroke-linecap: round; }
+.soundbtn .on { display: none; }
+.soundbtn[aria-pressed="true"] { color: var(--goal); }
+.soundbtn[aria-pressed="true"] .on { display: block; }
+.soundbtn[aria-pressed="true"] .off { display: none; }
+.soundbtn.blocked { color: var(--muted); }
+.soundbtn.blocked::after { content: ''; position: absolute; top: 5px; right: 5px; width: 7px; height: 7px; border-radius: 50%; background: var(--goal); animation: pulse 1.6s infinite; }
 .updated { color: var(--dim); font-size: 12px; font-variant-numeric: tabular-nums; }
 .livecount { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; font-size: 12px; color: var(--live); text-transform: uppercase; letter-spacing: .06em; }
 .livecount::before, .dot { content: ''; width: 8px; height: 8px; border-radius: 50%; background: var(--live); animation: pulse 1.6s infinite; display: inline-block; }

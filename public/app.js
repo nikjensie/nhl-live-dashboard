@@ -1,5 +1,6 @@
 // Rinkside – frontend. Inga beroenden.
 import { demoScores, demoFantasy, demoOnIce } from './demo.js';
+import { unlock, isUnlocked, playHorn } from './horn.js';
 
 const $ = (s, el = document) => el.querySelector(s);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -140,6 +141,7 @@ function detectNewGoals(data) {
     return;
   }
   const fresh = data.goals.filter((g) => !state.seen.has(g.id));
+  if (isToday && fresh.length) goalHorn();
   for (const g of fresh) {
     state.seen.add(g.id);
     if (!isToday) continue;
@@ -404,6 +406,40 @@ function renderFantasy() {
     return `<div class="lg">${head}<div class="mu">${row(lg.me, a, b, lg.me.projected, true)}${row(lg.opp, b, a, lg.opp.projected, false)}${tieNote}</div>${cats}</div>`;
   }).join('');
 }
+
+// ---------- Målhorn ----------
+let soundOn = store.get('rs.sound', false);
+let lastHorn = 0;
+
+function renderSoundBtn() {
+  const b = $('#soundBtn');
+  const blocked = soundOn && !isUnlocked();
+  b.setAttribute('aria-pressed', String(soundOn));
+  b.classList.toggle('blocked', blocked);
+  b.title = !soundOn ? 'Slå på målhorn' : blocked ? 'Tryck för att aktivera ljudet' : 'Stäng av målhorn';
+}
+
+function goalHorn() {
+  if (!soundOn) return;
+  if (Date.now() - lastHorn < 4000) return; // flera mål i samma uppdatering: ett horn räcker
+  if (playHorn()) lastHorn = Date.now();
+}
+
+$('#soundBtn').addEventListener('click', async () => {
+  if (soundOn && isUnlocked()) {
+    soundOn = false;
+  } else {
+    soundOn = true;
+    if (await unlock()) playHorn({ duration: 1.2, volume: 0.4 }); // kort provtut
+  }
+  store.set('rs.sound', soundOn);
+  renderSoundBtn();
+});
+// Ljud som var påslaget vid förra besöket måste låsas upp med ett tryck någonstans på sidan
+document.addEventListener('pointerdown', async () => {
+  if (soundOn && !isUnlocked()) { await unlock(); renderSoundBtn(); }
+}, { capture: true });
+renderSoundBtn();
 
 // ---------- Toast ----------
 function toast(g, data) {
