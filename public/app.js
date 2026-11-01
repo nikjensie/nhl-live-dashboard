@@ -162,6 +162,7 @@ function detectNewGoals(data) {
 
 // ---------- Render: matcher ----------
 function renderAll() {
+  renderBox();
   renderHeader();
   renderGames();
   renderGoals();
@@ -274,7 +275,7 @@ function gameCard(g) {
   }
 
   return `
-    <article class="game ${g.state} ${banner ? 'goal-flash' : ''}">
+    <article class="game ${g.state} ${banner ? 'goal-flash' : ''}" data-id="${g.id}" ${g.state !== 'pre' ? 'tabindex="0" role="button" aria-label="Visa boxscore"' : ''}>
       <div class="g-top">${top}${nhl}</div>
       <div class="g-teams">${teamRow(g.away, g.home, g)}${teamRow(g.home, g.away, g)}</div>
       ${sit}${foot}${banner}
@@ -407,6 +408,128 @@ function renderFantasy() {
   }).join('');
 }
 
+// ---------- Boxscore ----------
+let boxReturnFocus = null;
+
+function openBox(id) {
+  state.boxId = id;
+  boxReturnFocus = document.activeElement;
+  $('#box').hidden = false;
+  document.body.classList.add('box-open');
+  renderBox();
+  $('.box-close').focus();
+}
+
+function closeBox() {
+  state.boxId = null;
+  $('#box').hidden = true;
+  document.body.classList.remove('box-open');
+  boxReturnFocus?.focus?.();
+}
+
+function renderBox() {
+  if (!state.boxId || !state.scores) return;
+  const g = state.scores.games.find((x) => x.id === state.boxId);
+  if (!g) { closeBox(); return; }
+  const goals = state.scores.goals
+    .filter((x) => x.gameId === g.id)
+    .sort((a, b) => a.period - b.period || a.timeInPeriod.localeCompare(b.timeInPeriod));
+  const logo = (t) => `<img src="${esc(darkLogo(t.logo))}" alt="" onerror="this.style.visibility='hidden'">`;
+
+  // Status
+  let status;
+  if (g.state === 'final') {
+    status = g.outcome === 'SO' ? 'Slut efter straffar' : g.outcome === 'OT' ? 'Slut efter förlängning' : 'Slut';
+  } else if (g.clock?.inIntermission) {
+    status = `Paus efter ${periodLabel(g.period, g.periodType)}`;
+  } else {
+    const secs = liveSecs(g.clock?.secondsRemaining, g.clock?.running);
+    status = `${periodLabel(g.period, g.periodType)} · ${secs != null ? mmss(secs) : esc(g.clock?.timeRemaining || '')}`;
+  }
+
+  // Resultat per period
+  const shootout = g.outcome === 'SO' || g.periodType === 'SO';
+  // Straffläggningen har eget periodnummer hos NHL – visa den som egen kolumn, inte som extra förlängning
+  const lastPeriod = shootout ? 4 : Math.max(3, g.period || 0, ...goals.map((x) => x.period));
+  const periods = Array.from({ length: lastPeriod }, (_, i) => i + 1);
+  const perGoals = (abbr, p) => goals.filter((x) => x.team === abbr && x.period === p).length;
+  const played = (p) => g.state === 'final' ? p <= lastPeriod && (p <= 3 || goals.some((x) => x.period === p) || shootout || g.outcome === 'OT') : p <= (g.period || 0);
+  const soWin = (t) => shootout && g.state === 'final' ? Math.max(0, (t.score ?? 0) - goals.filter((x) => x.team === t.abbrev).length) : null;
+  const lineRow = (t) => `
+    <tr>
+      <th>${logo(t)}<span>${esc(t.abbrev)}</span></th>
+      ${periods.map((p) => `<td>${played(p) ? perGoals(t.abbrev, p) : '–'}</td>`).join('')}
+      ${shootout ? `<td>${soWin(t) ?? '–'}</td>` : ''}
+      <td class="tot">${t.score ?? 0}</td>
+      <td class="sog">${t.sog ?? '–'}</td>
+    </tr>`;
+  const line = `
+    <table class="line">
+      <thead><tr><th></th>${periods.map((p) => `<th>${p > 3 ? (p === 4 ? 'OT' : `${p - 3}OT`) : p}</th>`).join('')}${shootout ? '<th>Str</th>' : ''}<th class="tot">T</th><th class="sog">Skott</th></tr></thead>
+      <tbody>${lineRow(g.away)}${lineRow(g.home)}</tbody>
+    </table>`;
+
+  // Mål per period
+  const teamLogo = { [g.away.abbrev]: g.away, [g.home.abbrev]: g.home };
+  const periodsWithPlay = periods.filter(played);
+  const goalList = periodsWithPlay.map((p) => {
+    const pg = goals.filter((x) => x.period === p);
+    const items = pg.length ? pg.map((x) => `
+      <li>
+        <span class="bt">${esc(x.timeInPeriod)}</span>
+        ${logo(teamLogo[x.team] || {})}
+        <div class="bg">
+          <div class="bs"><b>${esc(x.scorer)}</b>${x.scorerTotal != null ? ` <span class="tot">(${x.scorerTotal})</span>` : ''} ${goalTags(x)}</div>
+          <div class="ba">${x.assists.length ? x.assists.map((a) => `${esc(a.name)}${a.total != null ? ` (${a.total})` : ''}`).join(', ') : 'Utan assist'}</div>
+        </div>
+        <span class="bsc">${x.awayScore}–${x.homeScore}</span>
+      </li>`).join('') : '<li class="none">Inga mål</li>';
+    const name = p > 3 ? (p === 4 ? 'Förlängning' : `Förlängning ${p - 3}`) : `${{ 1: '1:a', 2: '2:a', 3: '3:e' }[p]} perioden`;
+    return `<h3>${name}</h3><ol class="bgoals">${items}</ol>`;
+  }).join('');
+
+  // Poängliga per lag
+  const pts = new Map();
+  const add = (team, key, name, field) => {
+    const k = `${team}|${key || name}`;
+    const r = pts.get(k) || { team, name, g: 0, a: 0 };
+    r[field]++;
+    pts.set(k, r);
+  };
+  for (const x of goals) {
+    // Samma namnform som assistnamnen ("A. Matthews"), så att spelaren hamnar på en rad
+    const short = x.scorerShort || x.scorer.replace(/^(\S)\S*\s+/, '$1. ');
+    add(x.team, x.scorerId, short, 'g');
+    for (const a of x.assists) add(x.team, a.playerId, a.name, 'a');
+  }
+  const ptsTable = (t) => {
+    const rows = [...pts.values()].filter((r) => r.team === t.abbrev)
+      .sort((a, b) => (b.g + b.a) - (a.g + a.a) || b.g - a.g || a.name.localeCompare(b.name));
+    return `
+      <div class="pts">
+        <div class="pts-h">${logo(t)}<span>${esc(t.name)}</span></div>
+        ${rows.length ? `<table><thead><tr><th></th><th>M</th><th>A</th><th>P</th></tr></thead><tbody>
+          ${rows.map((r) => `<tr><td>${esc(r.name)}</td><td>${r.g}</td><td>${r.a}</td><td class="p">${r.g + r.a}</td></tr>`).join('')}
+        </tbody></table>` : '<div class="none">Inga poäng</div>'}
+      </div>`;
+  };
+
+  const gcUrl = g.gameCenter || `https://www.nhl.com/gamecenter/${g.id}`;
+  $('#boxBody').innerHTML = `
+    <header class="box-head">
+      <div class="bh-team">${logo(g.away)}<div><b>${esc(g.away.abbrev)}</b><span>${esc(g.away.name)}</span></div></div>
+      <div class="bh-score">
+        <div class="sc" id="boxTitle">${g.away.score ?? 0}<span>–</span>${g.home.score ?? 0}</div>
+        <div class="st ${g.state === 'live' ? 'live' : ''}">${g.state === 'live' ? '<span class="dot"></span>' : ''}${status}</div>
+      </div>
+      <div class="bh-team home"><div><b>${esc(g.home.abbrev)}</b><span>${esc(g.home.name)}</span></div>${logo(g.home)}</div>
+    </header>
+    ${line}
+    <section class="box-goals">${goalList || '<p class="none">Inga mål än.</p>'}</section>
+    <section class="box-pts">${ptsTable(g.away)}${ptsTable(g.home)}</section>
+    <a class="box-gc" href="${esc(gcUrl)}" target="_blank" rel="noopener">Hela matchen på NHL.com ↗</a>`;
+}
+
 // ---------- Målhorn ----------
 let soundOn = store.get('rs.sound', false);
 let lastHorn = 0;
@@ -507,6 +630,20 @@ const picker = $('#datePick');
 // Öppna kalendern direkt vid klick (desktop-Chrome öppnar annars bara via ikonen)
 picker.addEventListener('click', () => { try { picker.showPicker?.(); } catch {} });
 picker.addEventListener('change', () => { if (picker.value) go(picker.value); });
+// Öppna boxscore vid tryck på ett matchkort (inte på NHL-länken)
+$('#games').addEventListener('click', (e) => {
+  if (e.target.closest('a')) return;
+  const card = e.target.closest('.game[data-id]');
+  if (card && !card.classList.contains('pre')) openBox(Number(card.dataset.id));
+});
+$('#games').addEventListener('keydown', (e) => {
+  if (e.key !== 'Enter' && e.key !== ' ') return;
+  const card = e.target.closest('.game[data-id]');
+  if (card && !card.classList.contains('pre')) { e.preventDefault(); openBox(Number(card.dataset.id)); }
+});
+$('#box').addEventListener('click', (e) => { if (e.target.closest('[data-close]')) closeBox(); });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && state.boxId) closeBox(); });
+
 $('#sortGoals').addEventListener('click', () => { state.asc = !state.asc; store.set('rs.goalOrderAsc', state.asc); renderGoals(); });
 document.addEventListener('visibilitychange', () => { if (!document.hidden) { fetchScores(); if (FANTASY) fetchFantasy(); } });
 

@@ -82,6 +82,14 @@
     </button>
   </nav>
 
+  <div id="box" class="box" hidden>
+    <div class="box-backdrop" data-close></div>
+    <div class="box-panel" role="dialog" aria-modal="true" aria-labelledby="boxTitle">
+      <button class="box-close" data-close aria-label="Stäng">×</button>
+      <div id="boxBody"></div>
+    </div>
+  </div>
+
   <div id="toasts" class="toasts" aria-live="polite"></div>
 
   <script src="app.js" type="module"></script>
