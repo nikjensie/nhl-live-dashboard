@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { parseSituation, normalizeGame } from '../lib/nhl.js';
+import { parseSituation, normalizeGame, stateOf } from '../lib/nhl.js';
 import { parseUserLeagues, parseUserTeamKeys, parseStatCategories, parseScoreboard } from '../lib/yahoo.js';
 
 test('situationCode: 5 mot 5', () => {
@@ -246,4 +246,16 @@ test('Yahoo: scoreboard hittar min matchup och räknar kategorier', () => {
 test('Yahoo: ingen matchup för mitt lag', () => {
   const r = parseScoreboard(scoreboard, new Set(['nope']), new Map());
   assert.equal(r.me, null);
+});
+
+test('stateOf: OVER (strax efter slutsignalen) räknas som avslutad, inte kommande', () => {
+  assert.equal(stateOf('OVER', 3), 'final');
+  assert.equal(stateOf('FINAL', 3), 'final');
+  assert.equal(stateOf('OFF', 3), 'final');
+  assert.equal(stateOf('LIVE', 2), 'live');
+  assert.equal(stateOf('CRIT', 3), 'live');
+  assert.equal(stateOf('FUT'), 'pre');
+  assert.equal(stateOf('PRE', 1), 'pre');
+  assert.equal(stateOf('NAGOT_NYTT', 2), 'live');
+  assert.equal(stateOf('NAGOT_NYTT'), 'pre');
 });
