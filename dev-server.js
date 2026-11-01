@@ -21,7 +21,7 @@ for (const f of ['.env.local', '.env']) {
 const types = {
   '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8',
   '.css': 'text/css; charset=utf-8', '.svg': 'image/svg+xml', '.json': 'application/json',
-  '.png': 'image/png', '.ico': 'image/x-icon', '.webmanifest': 'application/manifest+json',
+  '.png': 'image/png', '.m3u8': 'application/vnd.apple.mpegurl', '.ts': 'video/mp2t', '.ico': 'image/x-icon', '.webmanifest': 'application/manifest+json',
 };
 
 http.createServer(async (req, res) => {

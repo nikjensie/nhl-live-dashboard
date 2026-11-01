@@ -383,6 +383,48 @@ body.box-open { overflow: hidden; }
 .fleg i.opp { background: var(--opp); }
 #onlyMine[aria-pressed="true"] { color: var(--me); background: var(--me-bg); }
 
+/* ---------- Radio ---------- */
+.g-radio { display: inline-flex; gap: 2px; margin-left: auto; position: relative; z-index: 3; }
+.g-top .g-radio + .g-nhl { margin-left: 0; }
+.g-top .g-state { margin-left: auto; }
+.g-top .g-state ~ .g-radio { margin-left: 4px; }
+.rbtn { position: relative; width: 30px; height: 30px; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; opacity: .7; transition: opacity .15s, background .15s; }
+.rbtn:hover, .rbtn:focus-visible { opacity: 1; background: var(--card-2); }
+.rbtn img { width: 22px; height: 22px; }
+.rbtn span { font: 700 10px/1 var(--sans); }
+.rbtn .wave { position: absolute; right: 0; bottom: 1px; width: 11px; height: 11px; fill: none; stroke: var(--muted); stroke-width: 1.3; stroke-linecap: round; background: var(--card); border-radius: 50%; }
+.rbtn .wave circle { fill: var(--muted); stroke: none; }
+.rbtn.on { opacity: 1; background: rgba(59,130,246,.18); box-shadow: inset 0 0 0 1px var(--accent); }
+.rbtn.on .wave { stroke: var(--accent); }
+.rbtn.on .wave circle { fill: var(--accent); }
+
+.radiobar {
+  position: fixed; left: 50%; transform: translateX(-50%); bottom: 20px; z-index: 40;
+  display: flex; align-items: center; gap: 10px; width: min(420px, calc(100% - 32px));
+  background: var(--card-2); border: 1px solid var(--line); border-radius: 14px; padding: 8px 8px 8px 12px;
+  box-shadow: 0 12px 30px rgba(0,0,0,.45); animation: toastin .25s ease;
+}
+.radiobar img { width: 30px; height: 30px; flex: none; }
+.rb-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.rb-txt b { font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rb-txt span { font-size: 11px; color: var(--muted); }
+.radiobar.err .rb-txt span { color: var(--sh); }
+.radiobar .iconbtn { display: inline-flex; align-items: center; justify-content: center; font-size: 22px; }
+.radiobar .iconbtn svg { width: 18px; height: 18px; fill: currentColor; }
+.rb-eq { display: inline-flex; align-items: flex-end; gap: 2px; height: 14px; opacity: 0; }
+.radiobar.playing .rb-eq { opacity: 1; }
+.rb-eq i { width: 3px; background: var(--accent); border-radius: 1px; animation: eq 1s ease-in-out infinite; }
+.rb-eq i:nth-child(2) { animation-delay: -.4s; }
+.rb-eq i:nth-child(3) { animation-delay: -.7s; }
+@keyframes eq { 0%, 100% { height: 4px; } 50% { height: 14px; } }
+body.radio-on .toasts { bottom: 86px; }
+@media (max-width: 900px) {
+  .radiobar { bottom: calc(var(--tabbar-h) + 10px + env(safe-area-inset-bottom)); }
+  body.radio-on .toasts { bottom: calc(var(--tabbar-h) + 76px + env(safe-area-inset-bottom)); }
+  body.radio-on { padding-bottom: calc(var(--tabbar-h) + 70px + env(safe-area-inset-bottom)); }
+}
+@media (min-width: 901px) { body.radio-on .layout { padding-bottom: 90px; } }
+
 /* ---------- Toasts ---------- */
 .toasts { position: fixed; right: 20px; bottom: 20px; display: flex; flex-direction: column; gap: 8px; z-index: 50; pointer-events: none; }
 .toast {
@@ -451,3 +493,12 @@ body.no-fantasy .layout { grid-template-columns: minmax(0, 1fr) 380px; }
 .panel-head h2 { white-space: nowrap; }
 .panel-goals .panel-head { align-items: flex-start; flex-wrap: wrap; row-gap: 6px; flex-shrink: 0; }
 .panel-goals .panel-head h2 { padding-top: 4px; }
+
+/* Trång topprad på smala skärmar (radioknappar + NHL-länk): pricken räcker som live-markering */
+.g-period { white-space: nowrap; }
+@media (max-width: 600px) {
+  .g-top { gap: 6px; padding-left: 12px; padding-right: 10px; }
+  .g-state.live { font-size: 0; gap: 0; }
+  .g-period .intermission { font-size: 13px; }
+  .rbtn { width: 28px; }
+}

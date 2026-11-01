@@ -2,6 +2,7 @@
 import { demoScores, demoFantasy, demoOnIce } from './demo.js';
 import { unlock, isUnlocked, playHorn } from './horn.js';
 import { buildIndex, summarize } from './marks.js';
+import * as radio from './radio.js';
 
 const $ = (s, el = document) => el.querySelector(s);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -268,6 +269,17 @@ function gameCard(g) {
 
   // Länk till matchen på NHL.com (NHL-loggan, med text som reserv om bilden inte laddas)
   const gcUrl = g.gameCenter || `https://www.nhl.com/gamecenter/${g.id}`;
+  // Lagens radiosändningar (finns medan matchen pågår, ofta en stund innan)
+  const now = radio.nowPlaying()?.key;
+  const rbtn = (t, side) => {
+    const key = `${g.id}-${side}`;
+    return `<button class="rbtn ${now === key ? 'on' : ''}" data-radio="${g.id}" data-side="${side}" title="${now === key ? 'Stäng' : 'Lyssna på'} ${esc(t.name)}s radiosändning" aria-label="Radio ${esc(t.abbrev)}">
+      <img src="${esc(darkLogo(t.logo))}" alt="" onerror="this.replaceWith(Object.assign(document.createElement('span'),{textContent:'${esc(t.abbrev)}'}))">
+      <svg class="wave" viewBox="0 0 12 12" aria-hidden="true"><path d="M3.5 4.5a3.5 3.5 0 0 0 0 3M8.5 4.5a3.5 3.5 0 0 1 0 3M1.8 3a6 6 0 0 0 0 6M10.2 3a6 6 0 0 1 0 6"/><circle cx="6" cy="6" r="1.1"/></svg>
+    </button>`;
+  };
+  const radioBtns = g.state === 'final' ? '' : `<span class="g-radio">${rbtn(g.away, 'away')}${rbtn(g.home, 'home')}</span>`;
+
   const nhl = `<a class="g-nhl" href="${esc(gcUrl)}" target="_blank" rel="noopener" title="Öppna matchen på NHL.com" aria-label="Öppna matchen på NHL.com">
       <img src="https://assets.nhle.com/logos/nhl/svg/NHL_dark.svg" alt="" onerror="this.hidden=true;this.nextElementSibling.hidden=false">
       <span hidden>NHL.com</span><svg class="ext" viewBox="0 0 12 12" aria-hidden="true"><path d="M4.5 2.5h5v5M9.5 2.5l-7 7"/></svg></a>`;
@@ -282,7 +294,7 @@ function gameCard(g) {
 
   return `
     <article class="game ${g.state} ${banner ? 'goal-flash' : ''}" data-id="${g.id}" ${g.state !== 'pre' ? 'tabindex="0" role="button" aria-label="Visa boxscore"' : ''}>
-      <div class="g-top">${top}${nhl}</div>
+      <div class="g-top">${top}${radioBtns}${nhl}</div>
       <div class="g-teams">${teamRow(g.away, g.home, g)}${teamRow(g.home, g.away, g)}</div>
       ${sit}${foot}${banner}
     </article>`;
@@ -586,6 +598,64 @@ function renderBox() {
     <a class="box-gc" href="${esc(gcUrl)}" target="_blank" rel="noopener">Hela matchen på NHL.com ↗</a>`;
 }
 
+// ---------- Radio ----------
+const radioLinks = new Map(); // gameId -> { at, data }
+
+function notice(msg) {
+  const d = document.createElement('div');
+  d.className = 'toast';
+  d.innerHTML = `<div class="t2">${esc(msg)}</div>`;
+  $('#toasts').append(d);
+  setTimeout(() => d.remove(), 5000);
+}
+
+async function handleRadio(gameId, side) {
+  const key = `${gameId}-${side}`;
+  if (radio.nowPlaying()?.key === key) { radio.stop(); return; }
+  const g = state.scores?.games.find((x) => x.id === gameId);
+  if (!g) return;
+  const team = g[side];
+  radio.prime(); // lås upp ljudet inom klicket, innan vi väntar på nätet
+  try {
+    let c = radioLinks.get(gameId);
+    if (!c || Date.now() - c.at > 120_000) {
+      const r = await fetch(`/api/radio?gameId=${gameId}`);
+      if (!r.ok) throw new Error();
+      c = { at: Date.now(), data: await r.json() };
+      radioLinks.set(gameId, c);
+    }
+    const url = c.data[side]?.url;
+    if (!url) { notice(`Ingen radiosändning för ${team.name} just nu – den brukar starta strax före nedsläpp.`); return; }
+    radio.play({ key, url, logo: team.logo, title: `${team.name} radio`, sub: `${g.away.abbrev} @ ${g.home.abbrev}` });
+  } catch {
+    notice('Kunde inte hämta radiolänken. Försök igen.');
+  }
+}
+
+function renderRadio(cur, audio) {
+  const bar = $('#radioBar');
+  bar.hidden = !cur;
+  document.body.classList.toggle('radio-on', !!cur);
+  for (const b of document.querySelectorAll('.rbtn')) {
+    b.classList.toggle('on', !!cur && cur.key === `${b.dataset.radio}-${b.dataset.side}`);
+  }
+  if (!cur) return;
+  $('#rbLogo').src = darkLogo(cur.logo);
+  $('#rbTitle').textContent = cur.title;
+  const paused = !audio || audio.paused;
+  $('#rbSub').textContent = cur.error ? cur.error : cur.loading ? 'Ansluter…' : paused ? `Pausad · ${cur.sub}` : `Live · ${cur.sub}`;
+  bar.classList.toggle('playing', !paused && !cur.loading && !cur.error);
+  bar.classList.toggle('err', !!cur.error);
+  const t = $('#rbToggle');
+  t.innerHTML = paused
+    ? '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>'
+    : '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 5h4v14H7zM13 5h4v14h-4z"/></svg>';
+  t.setAttribute('aria-label', paused ? 'Spela' : 'Pausa');
+}
+radio.onChange(renderRadio);
+$('#rbToggle').addEventListener('click', () => radio.toggle());
+$('#rbStop').addEventListener('click', () => radio.stop());
+
 // ---------- Målhorn ----------
 let soundOn = store.get('rs.sound', false);
 let lastHorn = 0;
@@ -689,12 +759,15 @@ picker.addEventListener('click', () => { try { picker.showPicker?.(); } catch {}
 picker.addEventListener('change', () => { if (picker.value) go(picker.value); });
 // Öppna boxscore vid tryck på ett matchkort (inte på NHL-länken)
 $('#games').addEventListener('click', (e) => {
+  const rb = e.target.closest('.rbtn');
+  if (rb) { e.stopPropagation(); handleRadio(Number(rb.dataset.radio), rb.dataset.side); return; }
   if (e.target.closest('a')) return;
   const card = e.target.closest('.game[data-id]');
   if (card && !card.classList.contains('pre')) openBox(Number(card.dataset.id));
 });
 $('#games').addEventListener('keydown', (e) => {
   if (e.key !== 'Enter' && e.key !== ' ') return;
+  if (e.target.closest('.rbtn, a')) return;
   const card = e.target.closest('.game[data-id]');
   if (card && !card.classList.contains('pre')) { e.preventDefault(); openBox(Number(card.dataset.id)); }
 });
