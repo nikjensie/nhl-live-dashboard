@@ -1,6 +1,7 @@
 // Rinkside – frontend. Inga beroenden.
 import { demoScores, demoFantasy, demoOnIce } from './demo.js';
 import { unlock, isUnlocked, playHorn } from './horn.js';
+import { buildIndex, summarize } from './marks.js';
 
 const $ = (s, el = document) => el.querySelector(s);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -27,6 +28,8 @@ const state = {
   unseenBadge: 0,
   asc: store.get('rs.goalOrderAsc', false), // standard: senaste först
   tab: 'games',
+  marks: buildIndex(null),   // fantasyspelare (Yahoo-trupper)
+  onlyMine: store.get('rs.onlyMine', false),
   onice: new Map(),         // gameId -> { goals, at, loading, failed }
 };
 
@@ -120,14 +123,17 @@ async function fetchFantasy() {
   try {
     if (DEMO) state.fantasy = demoFantasy();
     else {
-      const r = await fetch('/api/fantasy', { cache: 'no-store', credentials: 'same-origin' });
+      const d = state.date || state.scores?.date;
+      const r = await fetch(`/api/fantasy${d ? `?date=${d}` : ''}`, { cache: 'no-store', credentials: 'same-origin' });
       state.fantasy = await r.json();
     }
   } catch (err) {
     state.fantasy = { loggedIn: false, error: String(err) };
   }
+  state.marks = buildIndex(state.fantasy?.loggedIn ? state.fantasy : null);
   renderAccount();
   renderFantasy();
+  if (state.scores) renderAll();
   clearTimeout(fetchFantasy.t);
   fetchFantasy.t = setTimeout(fetchFantasy, 60_000);
 }
@@ -256,8 +262,8 @@ function gameCard(g) {
   let foot = '';
   if (g.lastGoal && g.state !== 'pre') {
     const lg = g.lastGoal;
-    const ast = lg.assists.length ? ` (${lg.assists.map((a) => esc(a.name)).join(', ')})` : '';
-    foot = `<div class="g-last"><span class="gl-ico"></span><span>Senast: <b>${esc(lg.scorer)}</b>${ast} · ${esc(lg.team)} ${esc(periodLabel(lg.period, lg.periodType))} ${esc(lg.timeInPeriod)}</span></div>`;
+    const ast = lg.assists.length ? ` (${lg.assists.map((a) => pn(lg.team, a.name)).join(', ')})` : '';
+    foot = `<div class="g-last"><span class="gl-ico"></span><span>Senast: <b>${pn(lg.team, lg.scorer)}</b>${ast} · ${esc(lg.team)} ${esc(periodLabel(lg.period, lg.periodType))} ${esc(lg.timeInPeriod)}</span></div>`;
   }
 
   // Länk till matchen på NHL.com (NHL-loggan, med text som reserv om bilden inte laddas)
@@ -306,13 +312,22 @@ function renderGoals() {
   if (!state.scores) return;
   const logos = {};
   for (const g of state.scores.games) { logos[g.away.abbrev] = g.away.logo; logos[g.home.abbrev] = g.home.logo; }
-  const goals = state.scores.goals.map((g) => ({ ...g, wall: goalWallTime(g) }));
+  const marked = state.marks.size > 0;
+  $('#fLegend').hidden = !marked;
+  $('#onlyMine').hidden = !marked;
+  $('#onlyMine').setAttribute('aria-pressed', String(state.onlyMine));
+  const filterOn = marked && state.onlyMine;
+  const goals = state.scores.goals
+    .filter((g) => !filterOn || involvesFantasy(g))
+    .map((g) => ({ ...g, wall: goalWallTime(g) }));
   goals.sort((a, b) => a.wall.ms - b.wall.ms || a.id.localeCompare(b.id));
   if (!state.asc) goals.reverse();
   $('#sortGoals').textContent = state.asc ? 'Äldst först' : 'Senaste först';
 
   if (!goals.length) {
-    $('#goals').innerHTML = `<li class="empty">Inga mål än. Nya mål dyker upp här direkt.</li>`;
+    $('#goals').innerHTML = filterOn
+      ? `<li class="empty">Inga mål för dina fantasyspelare eller motståndarens än.</li>`
+      : `<li class="empty">Inga mål än. Nya mål dyker upp här direkt.</li>`;
     return;
   }
   const el = $('#goals');
@@ -320,7 +335,7 @@ function renderGoals() {
   el.innerHTML = goals.map((g) => {
     const sc = `${esc(g.away)} ${g.awayScore}–${g.homeScore} ${esc(g.home)}`;
     const ast = g.assists.length
-      ? `Assist: ${g.assists.map((a) => `<b>${esc(a.name)}</b>${a.total != null ? ` (${a.total})` : ''}`).join(', ')}`
+      ? `Assist: ${g.assists.map((a) => `<b>${pn(g.team, a.name)}</b>${a.total != null ? ` (${a.total})` : ''}`).join(', ')}`
       : 'Utan assist';
     return `
       <li class="goal ${state.newGoals.has(g.id) ? 'new' : ''}">
@@ -333,13 +348,36 @@ function renderGoals() {
           <span>${esc(periodLabel(g.period, g.periodType))} ${esc(g.timeInPeriod)}</span><span class="sep">·</span>
           <span>${esc(g.away)} @ ${esc(g.home)}</span>
         </div>
-        <div class="scorer">${esc(g.scorer)}${g.scorerTotal != null ? ` <span class="tot">(${g.scorerTotal})</span>` : ''} ${goalTags(g)}</div>
+        <div class="scorer">${pn(g.team, g.scorer)}${g.scorerTotal != null ? ` <span class="tot">(${g.scorerTotal})</span>` : ''} ${goalTags(g)}</div>
         <div class="assists">${ast}</div>
         ${onIceHtml(g)}
         <div class="scoreline"><span class="sc">${sc}</span>${g.clip ? `<a href="${esc(g.clip)}" target="_blank" rel="noopener">Klipp ↗</a>` : ''}</div>
       </li>`;
   }).join('');
   el.scrollTop = keep;
+}
+
+// ---------- Fantasymarkering ----------
+/** Namn med orange (min spelare) eller ljusblå (motståndarens) markering. display = text som visas. */
+function pn(team, name, display = name) {
+  const m = summarize(state.marks.lookup(team, name));
+  if (!m) return esc(display);
+  const multi = state.marks.leagues > 1;
+  const title = m.hits.map((h) => `${h.side === 'me' ? 'Ditt lag' : 'Motståndare'} – ${h.league}${h.active ? '' : ' (bänk/IR)'}`).join('\n');
+  const tags = multi ? `<sup class="ft">${m.hits.map((h) => `<i class="${h.side}">${esc(h.tag)}</i>`).join('')}</sup>` : '';
+  return `<span class="fp ${m.side}${m.active ? '' : ' bench'}" title="${esc(title)}">${esc(display)}</span>${tags}`;
+}
+
+/** Berör målet någon av mina eller motståndarens spelare (målgörare, assist eller på isen)? */
+function involvesFantasy(g) {
+  const hit = (name) => state.marks.lookup(g.team, name).length > 0;
+  if (hit(g.scorer) || g.assists.some((a) => hit(a.name))) return true;
+  const c = state.onice.get(g.gameId)?.goals?.[g.id];
+  if (c?.complete && showsPlusMinus(g)) {
+    return c.scoring.some((p) => state.marks.lookup(c.scoringTeam, p.short || p.name).length)
+      || c.conceding.some((p) => state.marks.lookup(c.otherTeam, p.short || p.name).length);
+  }
+  return false;
 }
 
 function onIceHtml(g) {
@@ -350,9 +388,9 @@ function onIceHtml(g) {
   if (!c || !c.complete) {
     return entry.failed && !c ? '' : '<div class="pm pending">+/- väntar på bytesdata…</div>';
   }
-  const names = (list) => list.map((p) => `<span class="pn">${p.num != null ? `<i>${p.num}</i>` : ''}${esc(p.name)}</span>`).join('');
+  const names = (list, team) => list.map((p) => `<span class="pn">${p.num != null ? `<i>${p.num}</i>` : ''}${pn(team, p.short || p.name, p.name)}</span>`).join('');
   const row = (cls, sign, team, list) =>
-    `<div class="pm-row ${cls}"><b>${sign}</b><span class="pt">${esc(team)}</span><span class="pl">${names(list)}</span></div>`;
+    `<div class="pm-row ${cls}"><b>${sign}</b><span class="pt">${esc(team)}</span><span class="pl">${names(list, team)}</span></div>`;
   return `<div class="pm">${row('plus', '+', c.scoringTeam, c.scoring)}${row('minus', '−', c.otherTeam, c.conceding)}</div>`;
 }
 
@@ -479,8 +517,8 @@ function renderBox() {
         <span class="bt">${esc(x.timeInPeriod)}</span>
         ${logo(teamLogo[x.team] || {})}
         <div class="bg">
-          <div class="bs"><b>${esc(x.scorer)}</b>${x.scorerTotal != null ? ` <span class="tot">(${x.scorerTotal})</span>` : ''} ${goalTags(x)}</div>
-          <div class="ba">${x.assists.length ? x.assists.map((a) => `${esc(a.name)}${a.total != null ? ` (${a.total})` : ''}`).join(', ') : 'Utan assist'}</div>
+          <div class="bs"><b>${pn(x.team, x.scorer)}</b>${x.scorerTotal != null ? ` <span class="tot">(${x.scorerTotal})</span>` : ''} ${goalTags(x)}</div>
+          <div class="ba">${x.assists.length ? x.assists.map((a) => `${pn(x.team, a.name)}${a.total != null ? ` (${a.total})` : ''}`).join(', ') : 'Utan assist'}</div>
         </div>
         <span class="bsc">${x.awayScore}–${x.homeScore}</span>
       </li>`).join('') : '<li class="none">Inga mål</li>';
@@ -522,7 +560,7 @@ function renderBox() {
       <div class="pts">
         <div class="pts-h">${logo(t)}<span>${esc(t.name)}</span></div>
         ${rows.length ? `<table><thead><tr><th></th><th>M</th><th>A</th><th>P</th>${showPm ? '<th>+/-</th>' : ''}</tr></thead><tbody>
-          ${rows.map((r) => `<tr><td>${esc(r.name)}</td><td>${r.g}</td><td>${r.a}</td><td class="p">${r.g + r.a}</td>${showPm
+          ${rows.map((r) => `<tr><td>${pn(r.team, r.name)}</td><td>${r.g}</td><td>${r.a}</td><td class="p">${r.g + r.a}</td>${showPm
             ? `<td class="pm ${r.pm > 0 ? 'pos' : r.pm < 0 ? 'neg' : ''}">${fmtPm(r.pm)}</td>` : ''}</tr>`).join('')}
         </tbody></table>` : '<div class="none">Inga poäng</div>'}
       </div>`;
@@ -591,8 +629,8 @@ function toast(g, data) {
   div.innerHTML = `
     <img src="${esc(darkLogo(logo))}" alt="">
     <div><div class="t1">MÅL ${esc(g.team)}</div>
-    <div class="t2">${esc(g.scorer)} ${goalTags(g)}</div>
-    <div class="t3">${g.assists.length ? 'Assist: ' + g.assists.map((a) => esc(a.name)).join(', ') : 'Utan assist'} · ${esc(g.away)} ${g.awayScore}–${g.homeScore} ${esc(g.home)}</div></div>`;
+    <div class="t2">${pn(g.team, g.scorer)} ${goalTags(g)}</div>
+    <div class="t3">${g.assists.length ? 'Assist: ' + g.assists.map((a) => pn(g.team, a.name)).join(', ') : 'Utan assist'} · ${esc(g.away)} ${g.awayScore}–${g.homeScore} ${esc(g.home)}</div></div>`;
   $('#toasts').append(div);
   setTimeout(() => div.remove(), 7200);
 }
@@ -635,6 +673,7 @@ function go(date) {
   $('#dateText').textContent = date ? dayFmt.format(new Date(`${date}T12:00:00`)) : 'Idag';
   $('#todayBtn').hidden = !date;
   fetchScores();
+  if (FANTASY || DEMO) fetchFantasy(); // trupperna för den valda dagen
 }
 
 document.querySelector('.tabbar').addEventListener('click', (e) => {
@@ -662,8 +701,9 @@ $('#games').addEventListener('keydown', (e) => {
 $('#box').addEventListener('click', (e) => { if (e.target.closest('[data-close]')) closeBox(); });
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && state.boxId) closeBox(); });
 
+$('#onlyMine').addEventListener('click', () => { state.onlyMine = !state.onlyMine; store.set('rs.onlyMine', state.onlyMine); renderGoals(); });
 $('#sortGoals').addEventListener('click', () => { state.asc = !state.asc; store.set('rs.goalOrderAsc', state.asc); renderGoals(); });
-document.addEventListener('visibilitychange', () => { if (!document.hidden) { fetchScores(); if (FANTASY) fetchFantasy(); } });
+document.addEventListener('visibilitychange', () => { if (!document.hidden) { fetchScores(); if (FANTASY || DEMO) fetchFantasy(); } });
 
 const auth = params.get('auth');
 if (auth) {
@@ -679,5 +719,5 @@ if (auth) {
 
 $('#games').innerHTML = `<div class="empty">Laddar…</div>`;
 fetchScores();
-if (FANTASY) fetchFantasy();
+if (FANTASY || DEMO) fetchFantasy();
 setInterval(tick, 1000);

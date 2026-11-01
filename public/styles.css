@@ -20,6 +20,10 @@
   --goal: #f5b83d;
   --goal-bg: rgba(245, 184, 61, 0.14);
   --accent: #3b82f6;
+  --me: #fb923c;
+  --me-bg: rgba(251, 146, 60, 0.16);
+  --opp: #7dd3fc;
+  --opp-bg: rgba(125, 211, 252, 0.14);
   --win: #22c55e;
   --lose: #ef4444;
 
@@ -363,6 +367,22 @@ body.box-open { overflow: hidden; }
   .line .sog { display: none; }
 }
 
+/* ---------- Fantasymarkering ---------- */
+.fp { border-radius: 4px; padding: 0 3px; margin: 0 -1px; box-decoration-break: clone; -webkit-box-decoration-break: clone; }
+.fp.me { color: var(--me); background: var(--me-bg); }
+.fp.opp { color: var(--opp); background: var(--opp-bg); }
+.fp.bench { background: none; text-decoration: underline dashed; text-underline-offset: 3px; opacity: .8; }
+.ft { display: inline-flex; gap: 2px; margin-left: 2px; vertical-align: 4px; }
+.ft i { font: 700 8.5px/1 var(--sans); font-style: normal; letter-spacing: .03em; padding: 1px 3px; border-radius: 3px; }
+.ft i.me { color: var(--me); background: var(--me-bg); }
+.ft i.opp { color: var(--opp); background: var(--opp-bg); }
+.goal-tools { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; justify-content: flex-end; }
+.fleg { display: inline-flex; align-items: center; gap: 4px; color: var(--muted); font-size: 11px; font-weight: 600; margin-right: 4px; }
+.fleg i { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-left: 4px; }
+.fleg i.me { background: var(--me); }
+.fleg i.opp { background: var(--opp); }
+#onlyMine[aria-pressed="true"] { color: var(--me); background: var(--me-bg); }
+
 /* ---------- Toasts ---------- */
 .toasts { position: fixed; right: 20px; bottom: 20px; display: flex; flex-direction: column; gap: 8px; z-index: 50; pointer-events: none; }
 .toast {
@@ -426,3 +446,8 @@ body.no-fantasy .layout { grid-template-columns: minmax(0, 1fr) 380px; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; transition: none !important; }
 }
+
+/* Målpanelens rubrik ska inte brytas när fantasyförklaringen visas */
+.panel-head h2 { white-space: nowrap; }
+.panel-goals .panel-head { align-items: flex-start; flex-wrap: wrap; row-gap: 6px; flex-shrink: 0; }
+.panel-goals .panel-head h2 { padding-top: 4px; }

@@ -4,7 +4,7 @@
 
 - **Matcher** – pågående först, sedan kommande och avslutade. Tryck på ett matchkort för en boxscore med resultat per period, skott, alla mål med assist och en poängliga per lag med +/-. Klockan och powerplay-tiden tickar lokalt mellan uppdateringarna (var 10:e sekund när matcher pågår).
 - **Nattens mål** – alla mål från dagens matcher, senaste först (kan vändas). Nya mål blinkar på matchkortet, dyker upp som notis och markeras i feeden. Med högtalarknappen i toppen spelas ett målhorn i arenastil (syntetiserat i webbläsaren). Under varje mål i lika numerär eller boxplay visas vilka utespelare som var på isen och vem som fick + respektive − (inte för PP- eller straffslagsmål, enligt NHL:s regler). Uppgifterna kommer från NHL:s bytesdata, som publiceras med några minuters fördröjning.
-- **Fantasy** – logga in med Yahoo. Kategoriligor visar vinster/förluster per kategori, poängligor visar poäng och prognos.
+- **Fantasy** – logga in med Yahoo. Kategoriligor visar vinster/förluster per kategori, poängligor visar poäng och prognos. Spelare i ditt lag markeras **orange** och motståndarens **ljusblå** överallt i appen (målfeed, +/-, boxscore, notiser), med ligatagg om du är med i flera ligor. Bänk- och IR-spelare får streckad markering. "Bara matchups" i målkolumnen filtrerar fram mål som berör dina matchups. Yahoo och NHL har olika spelar-ID, så kopplingen görs på lag + efternamn + förnamnsinitial (`public/marks.js`).
 - **Mobil** – tre flikar längst ned: Matcher, Mål (med räknare för nya mål) och Fantasy.
 
 Testa utseendet utan pågående matcher: öppna `/?demo`.

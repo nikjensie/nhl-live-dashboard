@@ -56,7 +56,11 @@
       <section class="panel panel-goals" id="panel-goals" aria-label="Nattens mål">
         <div class="panel-head">
           <h2>Nattens mål <span id="goalTotal" class="count"></span></h2>
-          <button id="sortGoals" class="textbtn" title="Byt sorteringsordning">Senaste först</button>
+          <div class="goal-tools">
+            <span id="fLegend" class="fleg" hidden title="Markering från dina Yahoo-matchups"><i class="me"></i>Mina<i class="opp"></i>Motst.</span>
+            <button id="onlyMine" class="textbtn" hidden aria-pressed="false" title="Visa bara mål där mina eller motståndarens spelare deltog">Bara matchups</button>
+            <button id="sortGoals" class="textbtn" title="Byt sorteringsordning">Senaste först</button>
+          </div>
         </div>
         <ol id="goals" class="goals"></ol>
       </section>

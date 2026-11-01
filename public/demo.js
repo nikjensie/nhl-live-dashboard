@@ -81,7 +81,31 @@ export function demoScores() {
   return { date: new Date(T0).toISOString().slice(0, 10), prevDate: null, nextDate: null, fetchedAt: new Date().toISOString(), games, goals };
 }
 
+const pl = (name, team, slot = 'C') => {
+  const [first, ...rest] = name.split(' ');
+  return { name, first, last: rest.join(' '), team, slot, active: !['BN', 'IR', 'IR+'].includes(slot) };
+};
+const DEMO_ROSTERS = {
+  'demo.l.1': {
+    me: [pl('Auston Matthews', 'TOR'), pl('Cale Makar', 'COL', 'D'), pl('Jack Eichel', 'VGK'), pl('Lucas Raymond', 'DET', 'BN')],
+    opp: [pl('David Pastrnak', 'BOS', 'RW'), pl('Connor McDavid', 'EDM'), pl('Artemi Panarin', 'NYR', 'LW'), pl('Gabriel Landeskog', 'COL', 'LW')],
+  },
+  'demo.l.2': {
+    me: [pl('Leon Draisaitl', 'EDM'), pl('Mitch Marner', 'TOR', 'RW')],
+    opp: [pl('William Nylander', 'TOR', 'RW'), pl('Nathan MacKinnon', 'COL')],
+  },
+};
+
 export function demoFantasy() {
+  const f = demoFantasyBase();
+  for (const l of f.leagues) {
+    const r = DEMO_ROSTERS[l.key];
+    if (r) { l.me.players = r.me; l.opp.players = r.opp; }
+  }
+  return f;
+}
+
+function demoFantasyBase() {
   return {
     loggedIn: true,
     leagues: [

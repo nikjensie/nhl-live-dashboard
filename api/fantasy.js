@@ -1,12 +1,15 @@
 import { readSession, sessionCookie, clearSessionCookie } from '../lib/session.js';
 import {
   yf, refreshToken, appIdFromClientId, parseUserLeagues, parseUserTeamKeys, parseStatCategories, parseScoreboard,
+  parseRoster, nhlToday,
 } from '../lib/yahoo.js';
-import { sendJson } from '../lib/http.js';
+import { query, sendJson } from '../lib/http.js';
 
 // GET /api/fantasy – nuvarande matchup i alla NHL-ligor för inloggad Yahoo-användare.
 export default async function handler(req, res) {
   const headers = { 'Cache-Control': 'private, no-store' };
+  const qd = query(req).get('date');
+  const date = /^\d{4}-\d{2}-\d{2}$/.test(qd || '') ? qd : nhlToday();
   let session = readSession(req);
   if (!session?.refresh_token) {
     return sendJson(res, 200, { loggedIn: false, configured: !!process.env.YAHOO_CLIENT_ID }, headers);
@@ -42,7 +45,17 @@ export default async function handler(req, res) {
             yf(token, `/league/${lg.league_key}/scoreboard`),
             yf(token, `/league/${lg.league_key}/settings`),
           ]);
-          return { ...base, ...parseScoreboard(sb, myKeys, parseStatCategories(settings)) };
+          const mu = parseScoreboard(sb, myKeys, parseStatCategories(settings));
+          // Trupperna för dagen som visas, så att spelare kan markeras i matcherna
+          if (mu.me?.key && mu.opp?.key) {
+            const [mine, theirs] = await Promise.allSettled([
+              yf(token, `/team/${mu.me.key}/roster;date=${date}`),
+              yf(token, `/team/${mu.opp.key}/roster;date=${date}`),
+            ]);
+            mu.me.players = mine.status === 'fulfilled' ? parseRoster(mine.value) : [];
+            mu.opp.players = theirs.status === 'fulfilled' ? parseRoster(theirs.value) : [];
+          }
+          return { ...base, ...mu };
         } catch (err) {
           return { ...base, error: String(err.message || err) };
         }
