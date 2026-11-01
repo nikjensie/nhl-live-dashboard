@@ -41,7 +41,11 @@ const timeFmt = new Intl.DateTimeFormat('sv-SE', { hour: '2-digit', minute: '2-d
 const dayFmt = new Intl.DateTimeFormat('sv-SE', { weekday: 'short', day: 'numeric', month: 'short' });
 const mmss = (s) => `${Math.floor(s / 60)}:${String(Math.max(0, Math.floor(s % 60))).padStart(2, '0')}`;
 const toSecs = (t) => { const m = /^(\d+):(\d{2})$/.exec(t || ''); return m ? +m[1] * 60 + +m[2] : null; };
-const darkLogo = (url) => (url || '').replace(/_light\.svg$/, '_dark.svg');
+// NHL har loggor för mörk (_dark) och ljus (_light) bakgrund – välj efter aktivt tema
+const isLight = () => document.documentElement.dataset.theme === 'light';
+const darkLogo = (url) => (isLight()
+  ? (url || '').replace(/_dark\.svg$/, '_light.svg')
+  : (url || '').replace(/_light\.svg$/, '_dark.svg'));
 
 function periodLabel(n, type) {
   if (type === 'SO') return 'Straffar';
@@ -283,7 +287,7 @@ function gameCard(g) {
   const radioBtns = g.state === 'final' ? '' : `<span class="g-radio">${rbtn(g.away, 'away')}${rbtn(g.home, 'home')}</span>`;
 
   const nhl = `<a class="g-nhl" href="${esc(gcUrl)}" target="_blank" rel="noopener" title="Öppna matchen på NHL.com" aria-label="Öppna matchen på NHL.com">
-      <img src="https://assets.nhle.com/logos/nhl/svg/NHL_dark.svg" alt="" onerror="this.hidden=true;this.nextElementSibling.hidden=false">
+      <img src="https://assets.nhle.com/logos/nhl/svg/NHL_${isLight() ? 'light' : 'dark'}.svg" alt="" onerror="this.hidden=true;this.nextElementSibling.hidden=false">
       <span hidden>NHL.com</span><svg class="ext" viewBox="0 0 12 12" aria-hidden="true"><path d="M4.5 2.5h5v5M9.5 2.5l-7 7"/></svg></a>`;
 
   const fl = state.flash.get(g.id);
@@ -639,6 +643,37 @@ function renderBox() {
     ${footNote}
     <a class="box-gc" href="${esc(gcUrl)}" target="_blank" rel="noopener">Hela matchen på NHL.com ↗</a>`;
 }
+
+// ---------- Tema ----------
+const THEMES = ['auto', 'light', 'dark'];
+const THEME_LABEL = { auto: 'Auto (följer enheten)', light: 'Ljust', dark: 'Mörkt' };
+const THEME_ICON = {
+  auto: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path class="fill" d="M12 4a8 8 0 0 1 0 16z"/></svg>',
+  light: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M5.3 18.7l1.4-1.4M17.3 6.7l1.4-1.4"/></svg>',
+  dark: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg>',
+};
+let themePref = store.get('rs.theme', 'auto');
+const mqLight = window.matchMedia?.('(prefers-color-scheme: light)');
+
+function applyTheme() {
+  const light = themePref === 'light' || (themePref === 'auto' && !!mqLight?.matches);
+  const changed = isLight() !== light;
+  document.documentElement.dataset.theme = light ? 'light' : 'dark';
+  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', light ? '#ffffff' : '#0b0f14');
+  const b = $('#themeBtn');
+  b.innerHTML = THEME_ICON[themePref];
+  b.title = `Tema: ${THEME_LABEL[themePref]}`;
+  b.setAttribute('aria-label', b.title);
+  if (changed && state.scores) renderAll();
+  if (changed && radio.nowPlaying()) $('#rbLogo').src = darkLogo(radio.nowPlaying().logo);
+}
+$('#themeBtn').addEventListener('click', () => {
+  themePref = THEMES[(THEMES.indexOf(themePref) + 1) % THEMES.length];
+  store.set('rs.theme', themePref);
+  applyTheme();
+});
+mqLight?.addEventListener?.('change', () => { if (themePref === 'auto') applyTheme(); });
+applyTheme();
 
 // ---------- Radio ----------
 const radioLinks = new Map(); // gameId -> { at, data }
