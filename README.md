@@ -55,6 +55,7 @@ Importera sedan repot på vercel.com (Framework preset: *Other*, inga build-inst
 
 ```
 api/scores.js          NHL: matcher + mål för en dag (cachas 5 s på Vercels edge)
+lib/espn.js            Riktiga klockslag för mål från ESPN
 api/onice.js           NHL: spelare på isen och +/- per mål (play-by-play + shiftcharts)
 api/fantasy.js         Yahoo: din matchup i varje NHL-liga
 api/auth/*.js          Yahoo OAuth 2.0 (login, callback, logout)
@@ -71,6 +72,6 @@ NHL anger en `situationCode` med fyra siffror: bortamålvakt, bortautespelare, h
 
 ## Om måltiderna
 
-NHL:s API anger inte när på natten ett mål gjordes, bara tiden i perioden. För mål som redan fanns när sidan öppnades uppskattas klockslaget (visas med `~`). Mål som dyker upp medan sidan är öppen får exakt klockslag, och det sparas i webbläsaren.
+NHL:s API anger bara tiden i perioden, inte klockslaget. Klockslagen hämtas därför från ESPN:s öppna API (`wallclock` per händelse) och paras ihop med NHL:s mål per period, med kontroll av målgörarens namn. Finns ingen säker matchning används i stället tiden då sidan såg målet dyka upp, eller en uppskattning utifrån matchstart (visas med `~`).
 
 Data från NHL:s inofficiella publika API och Yahoo Fantasy Sports API. Inte associerat med NHL eller Yahoo.

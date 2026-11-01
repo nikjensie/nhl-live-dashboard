@@ -291,6 +291,8 @@ function goalTags(g) {
 }
 
 function goalWallTime(g) {
+  // 1) Riktigt klockslag från ESPN, 2) när sidan själv såg målet, 3) uppskattning
+  if (g.wallTime) { const ms = Date.parse(g.wallTime); return { ms, label: timeFmt.format(new Date(ms)), exact: true }; }
   const seen = state.firstSeen[g.id];
   if (seen) return { ms: seen, label: timeFmt.format(new Date(seen)), exact: true };
   if (g.estTime) { const ms = Date.parse(g.estTime); return { ms, label: `~${timeFmt.format(new Date(ms))}`, exact: false }; }
@@ -324,7 +326,7 @@ function renderGoals() {
           <img class="tlogo" src="${esc(darkLogo(logos[g.team]))}" alt="" loading="lazy" onerror="this.style.visibility='hidden'">
         </div>
         <div class="meta">
-          <span class="wall" title="${g.wall.exact ? 'Tid då målet dök upp' : 'Uppskattad tid'}">${esc(g.wall.label)}</span><span class="sep">·</span>
+          <span class="wall" title="${g.wallTime ? 'Klockslag då målet gjordes' : g.wall.exact ? 'Tid då målet dök upp här' : 'Uppskattad tid'}">${esc(g.wall.label)}</span><span class="sep">·</span>
           <span>${esc(periodLabel(g.period, g.periodType))} ${esc(g.timeInPeriod)}</span><span class="sep">·</span>
           <span>${esc(g.away)} @ ${esc(g.home)}</span>
         </div>

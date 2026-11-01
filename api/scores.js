@@ -1,5 +1,6 @@
 import { nhlFetch, normalizeGame } from '../lib/nhl.js';
 import { query, sendJson } from '../lib/http.js';
+import { goalWallTimes } from '../lib/espn.js';
 
 // GET /api/scores[?date=YYYY-MM-DD]
 // Matcher + alla mål för dagen. Pågående matcher berikas med play-by-play
@@ -22,9 +23,14 @@ export default async function handler(req, res) {
     );
 
     const normalized = games.map((g) => normalizeGame(g, pbpById.get(g.id)));
-    const goals = normalized
-      .flatMap((g) => g.goals)
-      .sort((a, b) => (a.estTime || '').localeCompare(b.estTime || ''));
+    const allGoals = normalized.flatMap((g) => g.goals);
+
+    // Riktiga klockslag från ESPN där de finns; annars ligger den uppskattade tiden kvar
+    const wall = await goalWallTimes(data.currentDate, normalized, allGoals);
+    for (const g of allGoals) g.wallTime = wall.get(g.id) || null;
+
+    const when = (g) => g.wallTime || g.estTime || '';
+    const goals = allGoals.slice().sort((a, b) => when(a).localeCompare(when(b)));
 
     sendJson(
       res,
