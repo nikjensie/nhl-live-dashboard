@@ -72,6 +72,8 @@ async function fetchScores() {
     }
     if (forDate !== state.date) return; // användaren har bytt dag under tiden
     if (!state.date) state.today = data.date;
+    // Standardvyn har bytt matchdag medan sidan var öppen: behandla den nya dagens mål som redan sedda
+    if (state.scores && data.date !== state.scores.date) state.seen = null;
     detectNewGoals(data);
     state.scores = data;
     state.fetchedAt = Date.now();

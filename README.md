@@ -9,6 +9,8 @@
 - **Tema** – knappen i toppen växlar mellan Auto (följer enhetens inställning), Ljust och Mörkt. Valet sparas i webbläsaren, och lagloggorna byter till NHL:s variant för ljus respektive mörk bakgrund.
 - **Mobil** – tre flikar längst ned: Matcher, Mål (med räknare för nya mål) och Fantasy.
 
+**Vilken dag visas?** Standardvyn visar NHL:s matchdag (amerikansk östkusttid), så nattens matcher hör till samma dag även när de spelas efter midnatt svensk tid. Gårdagens matchdag visas så länge någon av dess matcher pågår; när alla är klara byter vyn till dagens datum enligt östkusttid (tidigast kl. 06 svensk tid). Andra dagar nås med pilarna eller kalendern.
+
 Testa utseendet utan pågående matcher: öppna `/?demo`.
 
 > **Fantasy-delen är dold tills vidare.** Yahoo kräver sedan juli 2026 att appar godkänns för Fantasy-API:et (ansökan: <https://sports.yahoo.com/developer/access/>). Innan dess svarar API:et 403. Visa delen med `/?fantasy` (eller `/?demo&fantasy`).

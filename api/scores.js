@@ -1,4 +1,4 @@
-import { nhlFetch, normalizeGame } from '../lib/nhl.js';
+import { nhlFetch, normalizeGame, etDate, addDays, chooseDefaultDay } from '../lib/nhl.js';
 import { query, sendJson } from '../lib/http.js';
 import { goalWallTimes } from '../lib/espn.js';
 
@@ -8,8 +8,19 @@ import { goalWallTimes } from '../lib/espn.js';
 export default async function handler(req, res) {
   try {
     const date = query(req).get('date');
-    const path = date && /^\d{4}-\d{2}-\d{2}$/.test(date) ? `/score/${date}` : '/score/now';
-    const data = await nhlFetch(path);
+    let data;
+    if (date && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      data = await nhlFetch(`/score/${date}`);
+    } else {
+      // Standardvyn: stanna på gårdagens matchdag tills alla dess matcher är klara,
+      // byt sedan till dagens datum enligt östkusttid.
+      const today = etDate();
+      const [prev, cur] = await Promise.all([
+        nhlFetch(`/score/${addDays(today, -1)}`).catch(() => null),
+        nhlFetch(`/score/${today}`),
+      ]);
+      data = prev && chooseDefaultDay(prev.games) === 'prev' ? prev : cur;
+    }
     const games = data.games || [];
 
     const needPbp = games.filter(

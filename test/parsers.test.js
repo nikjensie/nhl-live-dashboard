@@ -281,3 +281,19 @@ test('normalizeBoxscore: officiell +/-, istid och skott per utespelare, målvakt
   assert.equal(b.away.skaters[1].pm, -1);
   assert.equal(b.home.skaters.length, 0);
 });
+
+import { etDate, addDays, chooseDefaultDay } from '../lib/nhl.js';
+test('dagsbyte: östkustdatum och gårdagens pågående matcher', () => {
+  // 05:30 svensk vintertid = 23:30 östkust föregående dag
+  assert.equal(etDate(new Date('2026-11-03T04:30:00Z')), '2026-11-02');
+  assert.equal(etDate(new Date('2026-11-03T05:30:00Z')), '2026-11-03');
+  assert.equal(addDays('2026-11-01', -1), '2026-10-31');
+  assert.equal(addDays('2026-12-31', 1), '2027-01-01');
+  assert.equal(chooseDefaultDay([{ gameState: 'OFF' }, { gameState: 'LIVE' }]), 'prev');
+  assert.equal(chooseDefaultDay([{ gameState: 'OFF' }, { gameState: 'CRIT' }]), 'prev');
+  assert.equal(chooseDefaultDay([{ gameState: 'OFF' }, { gameState: 'OVER' }]), 'today');
+  assert.equal(chooseDefaultDay([{ gameState: 'FINAL' }]), 'today');
+  assert.equal(chooseDefaultDay([]), 'today');
+  // Uppskjuten match ska inte låsa kvar gårdagen
+  assert.equal(chooseDefaultDay([{ gameState: 'LIVE', gameScheduleState: 'PPD' }]), 'today');
+});
