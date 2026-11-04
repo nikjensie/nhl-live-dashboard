@@ -47,6 +47,8 @@ const darkLogo = (url) => (isLight()
   ? (url || '').replace(/_dark\.svg$/, '_light.svg')
   : (url || '').replace(/_light\.svg$/, '_dark.svg'));
 
+const LONG_BREAK_SECS = 20 * 60; // pausklocka längre än så visas som förlängt uppehåll
+
 function periodLabel(n, type) {
   if (type === 'SO') return 'Straffar';
   if (type === 'OT') return n > 4 ? `${n - 3}OT` : 'OT';
@@ -237,8 +239,12 @@ function gameCard(g) {
   if (g.state === 'live') {
     const secs = liveSecs(c?.secondsRemaining, c?.running);
     const per = periodLabel(g.period, g.periodType);
+    // En vanlig paus är 18 min. Längre pausklocka = NHL har lagt in ett förlängt uppehåll (t.ex. isproblem).
+    const longBreak = c?.inIntermission && secs != null && secs > LONG_BREAK_SECS;
     top = c?.inIntermission
-      ? `<span class="intermission">Paus efter ${esc(periodLabel(g.period, g.periodType))}</span>${secs != null ? `<span class="clock stopped" data-clock>${mmss(secs)}</span>` : ''}`
+      ? longBreak
+        ? `<span class="intermission" title="NHL anger ${mmss(secs)} kvar av pausen">Förlängt uppehåll efter ${esc(periodLabel(g.period, g.periodType))}</span>`
+        : `<span class="intermission">Paus efter ${esc(periodLabel(g.period, g.periodType))}</span>${secs != null ? `<span class="clock stopped" data-clock>${mmss(secs)}</span>` : ''}`
       : `<span class="per">${esc(per)}</span><span class="clock ${c?.running ? '' : 'stopped'}" data-clock>${secs != null ? mmss(secs) : esc(c?.timeRemaining || '')}</span>`;
     top = `<div class="g-period" data-game="${g.id}">${top}</div><span class="g-state live"><span class="dot"></span>Live</span>`;
   } else if (g.state === 'final') {
@@ -515,7 +521,9 @@ function renderBox() {
   if (g.state === 'final') {
     status = g.outcome === 'SO' ? 'Slut efter straffar' : g.outcome === 'OT' ? 'Slut efter förlängning' : 'Slut';
   } else if (g.clock?.inIntermission) {
-    status = `Paus efter ${periodLabel(g.period, g.periodType)}`;
+    status = (g.clock.secondsRemaining ?? 0) > LONG_BREAK_SECS
+      ? `Förlängt uppehåll efter ${periodLabel(g.period, g.periodType)}`
+      : `Paus efter ${periodLabel(g.period, g.periodType)}`;
   } else {
     const secs = liveSecs(g.clock?.secondsRemaining, g.clock?.running);
     status = `${periodLabel(g.period, g.periodType)} · ${secs != null ? mmss(secs) : esc(g.clock?.timeRemaining || '')}`;
