@@ -3,9 +3,6 @@
   "outputDirectory": "public",
   "functions": {
     "api/**/*.js": {
-      "maxDuration": 15
-    },
-    "api/predictions.js": {
       "maxDuration": 30
     }
   }
