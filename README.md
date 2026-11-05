@@ -7,6 +7,7 @@
 - **Nattens mål** – alla mål från dagens matcher, senaste först (kan vändas). Nya mål blinkar på matchkortet, dyker upp som notis och markeras i feeden. Med högtalarknappen i toppen spelas ett målhorn i arenastil (syntetiserat i webbläsaren). Under varje mål i lika numerär eller boxplay visas vilka utespelare som var på isen och vem som fick + respektive − (inte för PP- eller straffslagsmål, enligt NHL:s regler). Uppgifterna kommer från NHL:s bytesdata, som publiceras med några minuters fördröjning.
 - **Fantasy** – logga in med Yahoo. Kategoriligor visar vinster/förluster per kategori, poängligor visar poäng och prognos. Spelare i ditt lag markeras **orange** och motståndarens **ljusblå** överallt i appen (målfeed, +/-, boxscore, notiser), med ligatagg om du är med i flera ligor. Bänk- och IR-spelare får streckad markering. "Bara matchups" i målkolumnen filtrerar fram mål som berör dina matchups. Yahoo och NHL har olika spelar-ID, så kopplingen görs på lag + efternamn + förnamnsinitial (`public/marks.js`).
 - **Vecka** – egen vy (växeln Live/Vecka i toppen, fliken Vecka på mobilen) med antal matcher och motståndare per lag och dag för innevarande vecka (idag–söndag) eller nästa vecka (mån–sön). Bortamatcher markeras med @, B2B när motståndaren spelade dagen innan, lagen med flest/färst matcher färgmarkeras, och en grön ▲ / röd ▼ vid motståndaren i cellen visar motståndarens form enligt ett formindex (se nedan) (förluster efter förlängning/straffar räknas som förluster) – praktiskt för fantasy-streaming (`api/week.js`, `lib/week.js`).
+- **Prognoser** – varje matchkort får en prognos (resultat, vinstchans, målvaktsstatus). Första preliminära prognosen läggs kl. 17:00 svensk tid på matchdagen, räknas om var 30:e minut och låses 30 minuter före nedsläpp. Den låsta prognosen ligger kvar under och efter matchen, där det markeras om den blev exakt rätt, rätt vinnare eller fel. Tryck på ett kommande matchkort för detaljer. Skjutknappen "Prognoser" slår av/på alla. Se *Prognosmodellen* nedan.
 - **Tema** – knappen i toppen växlar mellan Auto (följer enhetens inställning), Ljust och Mörkt. Valet sparas i webbläsaren, och lagloggorna byter till NHL:s variant för ljus respektive mörk bakgrund.
 - **Mobil** – tre flikar längst ned: Matcher, Mål (med räknare för nya mål) och Fantasy.
 
@@ -65,6 +66,7 @@ api/onice.js           NHL: spelare på isen och +/- per mål (play-by-play + sh
 api/radio.js           NHL: lagens radiosändningar (HLS) för en match
 api/boxscore.js        NHL: officiell spelarstatistik (+/-, istid, skott) för boxscoren
 api/week.js            NHL: veckoschema – matcher per lag denna/nästa vecka
+api/predictions.js     Matchprognoser (NHL + ESPN), låses och sparas i Vercel Blob
 api/fantasy.js         Yahoo: din matchup i varje NHL-liga
 api/auth/*.js          Yahoo OAuth 2.0 (login, callback, logout)
 lib/nhl.js             Hämtning och tolkning av NHL-data, situationCode -> PP/SH/EV
@@ -90,6 +92,21 @@ R = clamp(win_streak, ±5) / 5                 + raka vinster, − raka förlust
 ```
 
 ▲ vid index ≥ +35, ▼ vid ≤ −35, minst 5 spelade matcher. Underlaget är NHL:s schema för de senaste 28 dagarna. xG ingår inte eftersom NHL inte publicerar det per match i de öppna API:erna.
+
+## Prognosmodellen
+
+`lib/predict.js` (modell), `lib/predict-data.js` (datainsamling), `api/predictions.js` (schemaläggning och lagring).
+
+1. **Grund:** förväntade mål per lag enligt Poisson – anfall och försvar relativt ligasnittet (NHL-tabellen, regression mot snittet tidigt på säsongen) och hemmafördel (+4 %).
+2. **Form:** formindexet från veckoschemat (±8 % egna mål, ±5 % motståndarens).
+3. **Inbördes möten:** de 5 senaste mötena denna och förra säsongen (NHL), ±2 % per mål i snittmålskillnad.
+4. **Skador:** ESPN:s skadelista viktad med spelarnas poäng per match (NHL). Spelare vars förväntade återkomst är matchdagen räknas som tillbaka och ger ett lyft.
+5. **Startmålvakter:** ESPN:s *Confirmed/Expected*; startmålvaktens räddningsprocent mot lagets snitt justerar motståndarens förväntade mål (±15 %).
+6. **Back-to-back:** lag som spelade dagen innan −4 % egna mål, +3 % insläppta.
+
+Vinstchans = sannolikheten att vinna i ordinarie tid + andelen av oavgjort som avgörs i förlängning/straffar efter relativ styrka. Det visade resultatet är det mest sannolika där favoriten vinner (eller vinst i förlängning om oavgjort efter 60 min är mest sannolikt).
+
+**Schema och lagring:** kl. 17:00 svensk tid på matchdagen (NHL:s datum) räknas den första prognosen; därefter ny beräkning när den är äldre än 30 minuter, fram till 30 minuter före nedsläpp då den låses. Prognoser sparas i Vercel Blob (`predictions/YYYY-MM-DD.json`) så att den låsta prognosen kan visas och jämföras med resultatet. Matcher utan sparad prognos får ingen i efterhand. `.github/workflows/predictions.yml` anropar API:et var 30:e minut så att det sker även när ingen har sidan öppen.
 
 ## Om måltiderna
 
