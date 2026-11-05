@@ -814,10 +814,98 @@ function tick() {
 function setTab(tab) {
   state.tab = tab;
   document.body.dataset.tab = tab;
+  setView(tab === 'week' ? 'week' : 'live', false);
   for (const b of document.querySelectorAll('.tabbar button')) b.classList.toggle('active', b.dataset.tab === tab);
   if (tab === 'goals') { state.unseenBadge = 0; if (state.scores) renderHeader(); }
   window.scrollTo({ top: 0 });
 }
+
+// ---------- Veckoschema ----------
+const week = { which: 'current', sort: store.get('rs.weekSort', 'count'), cache: new Map() };
+const wkDay = new Intl.DateTimeFormat('sv-SE', { weekday: 'short', timeZone: 'UTC' });
+const wkDate = new Intl.DateTimeFormat('sv-SE', { day: 'numeric', month: 'numeric', timeZone: 'UTC' });
+const ymdDate = (ymd) => new Date(`${ymd}T12:00:00Z`);
+
+function setView(view, syncTab = true) {
+  document.body.dataset.view = view;
+  for (const b of document.querySelectorAll('.viewnav button')) b.classList.toggle('on', b.dataset.view === view);
+  if (syncTab && window.matchMedia('(max-width: 900px)').matches) {
+    // Håll mobilens flikrad i synk om vyn byts via desktop-växeln
+    const tab = view === 'week' ? 'week' : (state.tab === 'week' ? 'games' : state.tab);
+    if (tab !== state.tab) { setTab(tab); return; }
+  }
+  if (view === 'week') loadWeek();
+}
+
+async function loadWeek() {
+  const which = week.which;
+  const c = week.cache.get(which);
+  if (c?.data) renderWeek(c.data);
+  else $('#wkTable').innerHTML = '<div class="empty">Laddar schema…</div>';
+  if (c && (c.loading || Date.now() - c.at < 5 * 60_000)) return;
+  week.cache.set(which, { ...c, loading: true });
+  try {
+    const r = await fetch(`/api/week?week=${which}`);
+    if (!r.ok) throw new Error(r.status);
+    const data = await r.json();
+    week.cache.set(which, { at: Date.now(), data, loading: false });
+    if (week.which === which && document.body.dataset.view === 'week') renderWeek(data);
+  } catch {
+    week.cache.set(which, { ...c, at: Date.now(), loading: false });
+    if (!c?.data) $('#wkTable').innerHTML = '<div class="empty">Kunde inte hämta schemat. Försök igen om en stund.</div>';
+  }
+}
+
+function renderWeek(w) {
+  for (const b of document.querySelectorAll('[data-week]')) b.classList.toggle('on', b.dataset.week === week.which);
+  for (const b of document.querySelectorAll('[data-sort]')) b.classList.toggle('on', b.dataset.sort === week.sort);
+  const first = ymdDate(w.start), last = ymdDate(w.end);
+  const games = w.days.reduce((n, d) => n + d.count, 0);
+  $('#wkSub').textContent = `${wkDay.format(first)} ${wkDate.format(first)} – ${wkDay.format(last)} ${wkDate.format(last)} · ${games} matcher`;
+
+  const teams = [...w.teams];
+  if (week.sort === 'name') teams.sort((a, b) => a.abbrev.localeCompare(b.abbrev));
+  const counts = teams.map((t) => t.count);
+  const max = Math.max(...counts), min = Math.min(...counts);
+  const today = w.which === 'current' ? w.start : null; // perioden börjar idag (östkustdatum)
+  const logos = Object.fromEntries(w.teams.map((t) => [t.abbrev, t.logo]));
+  const lg = (url) => url ? `<img src="${esc(darkLogo(url))}" alt="" loading="lazy" onerror="this.style.visibility='hidden'">` : '';
+
+  const head = w.days.map((d) => {
+    const dt = ymdDate(d.date);
+    return `<th class="${d.date === today ? 'today' : ''}"><span class="wd">${wkDay.format(dt)}</span><span class="dd">${wkDate.format(dt)}</span><span class="dn" title="${d.count} matcher den dagen">${d.count}</span></th>`;
+  }).join('');
+  const rows = teams.map((t) => {
+    const byDate = new Map(t.games.map((g) => [g.date, g]));
+    const cls = max !== min && t.count === max ? 'hi' : max !== min && t.count === min ? 'lo' : '';
+    const cells = w.days.map((d) => {
+      const g = byDate.get(d.date);
+      if (!g) return `<td class="${d.date === today ? 'today' : ''}"></td>`;
+      const title = `${g.home ? 'Hemma mot' : 'Borta mot'} ${g.opp}${g.state === 'final' ? ' (spelad)' : g.state === 'live' ? ' (pågår)' : ''}${g.b2b ? ' · back-to-back' : ''}`;
+      return `<td class="g ${g.state} ${d.date === today ? 'today' : ''}" title="${esc(title)}">
+        <span class="opp">${lg(logos[g.opp])}<b>${g.home ? '' : '@'}${esc(g.opp)}</b></span>${g.b2b ? '<i class="b2b">B2B</i>' : ''}</td>`;
+    }).join('');
+    return `<tr><th class="tm"><span class="tmi">${lg(t.logo)}<span class="ab">${esc(t.abbrev)}</span><span class="nm">${esc(t.name)}</span></span></th>
+      <td class="cnt ${cls}"><span>${t.count}</span></td>${cells}</tr>`;
+  }).join('');
+  $('#wkTable').innerHTML = `
+    <table class="wk">
+      <thead><tr><th class="tm">Lag</th><th class="cnt">Antal</th>${head}</tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+    <p class="wk-note"><b>@</b> = bortamatch · <i class="b2b">B2B</i> = match dagen innan också · gråa rutor är redan spelade.</p>`;
+}
+
+for (const b of document.querySelectorAll('.viewnav button')) b.addEventListener('click', () => setView(b.dataset.view));
+$('#weekView').addEventListener('click', (e) => {
+  const wb = e.target.closest('[data-week]');
+  if (wb && wb.dataset.week !== week.which) { week.which = wb.dataset.week; loadWeek(); }
+  const sb = e.target.closest('[data-sort]');
+  if (sb && sb.dataset.sort !== week.sort) {
+    week.sort = sb.dataset.sort; store.set('rs.weekSort', week.sort);
+    const c = week.cache.get(week.which); if (c?.data) renderWeek(c.data);
+  }
+});
 
 function go(date) {
   if (!date || date === state.today) date = null;
