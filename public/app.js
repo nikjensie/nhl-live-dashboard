@@ -881,9 +881,9 @@ function renderWeek(w) {
     const cells = w.days.map((d) => {
       const g = byDate.get(d.date);
       if (!g) return `<td class="${d.date === today ? 'today' : ''}"></td>`;
-      const title = `${g.home ? 'Hemma mot' : 'Borta mot'} ${g.opp}${g.state === 'final' ? ' (spelad)' : g.state === 'live' ? ' (pågår)' : ''}${g.b2b ? ' · back-to-back' : ''}`;
+      const title = `${g.home ? 'Hemma mot' : 'Borta mot'} ${g.opp}${g.state === 'final' ? ' (spelad)' : g.state === 'live' ? ' (pågår)' : ''}${g.oppB2b ? ` · ${g.opp} spelade dagen innan` : ''}`;
       return `<td class="g ${g.state} ${d.date === today ? 'today' : ''}" title="${esc(title)}">
-        <span class="opp">${lg(logos[g.opp])}<b>${g.home ? '' : '@'}${esc(g.opp)}</b></span>${g.b2b ? '<i class="b2b">B2B</i>' : ''}</td>`;
+        <span class="opp">${lg(logos[g.opp])}<b>${g.home ? '' : '@'}${esc(g.opp)}</b></span>${g.oppB2b ? '<i class="b2b">B2B</i>' : ''}</td>`;
     }).join('');
     const form = (t.last || []).map((r) => ({ W: 'V', L: 'F', OTL: 'Fö' }[r] || r)).join(' ');
     const trend = t.trend === 'up'
@@ -899,7 +899,7 @@ function renderWeek(w) {
       <thead><tr><th class="tm">Lag</th><th class="cnt">Antal</th>${head}</tr></thead>
       <tbody>${rows}</tbody>
     </table>
-    <p class="wk-note"><b>@</b> = bortamatch · <i class="b2b">B2B</i> = match dagen innan också · gråa rutor är redan spelade · <span class="tr up">▲</span> vunnit 3 raka · <span class="tr down">▼</span> förlorat 3 raka (även efter förlängning/straffar).</p>`;
+    <p class="wk-note"><b>@</b> = bortamatch · <i class="b2b">B2B</i> = motståndaren spelade dagen innan · gråa rutor är redan spelade · <span class="tr up">▲</span> vunnit 3 raka · <span class="tr down">▼</span> förlorat 3 raka (även efter förlängning/straffar).</p>`;
 }
 
 for (const b of document.querySelectorAll('.viewnav button')) b.addEventListener('click', () => setView(b.dataset.view));

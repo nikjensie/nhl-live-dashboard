@@ -39,7 +39,10 @@ test('buildWeek: räknar matcher, motståndare, hemma/borta och back-to-back', (
   const tor = w.teams.find((t) => t.abbrev === 'TOR');
   assert.equal(tor.name, 'Maple Leafs');
   assert.equal(tor.count, 2); // uppskjuten match räknas inte
-  assert.deepEqual(tor.games.map((x) => [x.opp, x.home, !!x.b2b, x.state]), [['MTL', false, false, 'final'], ['BOS', true, true, 'pre']]);
+  // B2B gäller motståndaren: MTL spelade inte 4/11, BOS spelade 4/11 men inte 5/11
+  assert.deepEqual(tor.games.map((x) => [x.opp, x.home, x.oppB2b, x.state]), [['MTL', false, false, 'final'], ['BOS', true, false, 'pre']]);
+  // BOS möter TOR 6/11 och TOR spelade 5/11 -> B2B hos BOS
+  assert.equal(w.teams.find((t) => t.abbrev === 'BOS').games[0].oppB2b, true);
   assert.equal(tor.played, 1);
   const sea = w.teams.find((t) => t.abbrev === 'SEA');
   assert.equal(sea.count, 0); // lag utan matcher kommer med
@@ -67,4 +70,12 @@ test('computeTrends: tre raka vinster = upp, tre raka förluster (inkl. förl./s
   assert.deepEqual(t.get('EDM'), { trend: 'down', last: ['OTL', 'L', 'OTL'] });
   assert.equal(t.get('BOS').trend, null); // bara en avgjord match
   assert.deepEqual(t.get('BUF').last, ['OTL']);
+});
+
+test('buildWeek: B2B när motståndaren spelade dagen före perioden (historik)', () => {
+  const sched = [{ gameWeek: [{ date: '2026-11-05', games: [g(1, 'TOR', 'MTL')] }] }];
+  const hist = [{ gameWeek: [{ date: '2026-11-04', games: [g(9, 'MTL', 'OTT')] }] }];
+  const w = buildWeek(sched, [], '2026-11-05', '2026-11-05', hist);
+  assert.equal(w.teams.find((t) => t.abbrev === 'TOR').games[0].oppB2b, true);  // MTL spelade i går
+  assert.equal(w.teams.find((t) => t.abbrev === 'MTL').games[0].oppB2b, false); // TOR vilade
 });

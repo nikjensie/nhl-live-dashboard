@@ -19,7 +19,7 @@ export default async function handler(req, res) {
       Promise.all(hist.map((d) => nhlFetch(`/schedule/${d}`).catch(() => null))),
       ...pages,
     ]);
-    const week = buildWeek(schedule, standings, start, end);
+    const week = buildWeek(schedule, standings, start, end, histPages);
     const trends = computeTrends([...histPages, ...schedule]);
     for (const t of week.teams) Object.assign(t, trends.get(t.abbrev) || { trend: null, last: [] });
     sendJson(res, 200, { which, ...week },
