@@ -50,26 +50,47 @@ test('buildWeek: räknar matcher, motståndare, hemma/borta och back-to-back', (
   assert.equal(w.teams.at(-1).count, 0);
 });
 
-import { computeTrends } from '../lib/week.js';
-test('computeTrends: tre raka vinster = upp, tre raka förluster (inkl. förl./straffar) = ned', () => {
+import { computeForm } from '../lib/week.js';
+test('computeForm: index ur senaste 10 (poäng, målskillnad) och aktuell rad', () => {
   let id = 0;
-  const game = (date, away, as, home, hs, extra = 'REG', state = 'OFF') => ({
-    id: ++id, gameType: 2, gameState: state, startTimeUTC: `${date}T23:00:00Z`,
-    awayTeam: { abbrev: away, score: as }, homeTeam: { abbrev: home, score: hs }, gameOutcome: { lastPeriodType: extra },
-  });
-  const pages = [{ gameWeek: [
-    { date: '2026-10-28', games: [game('2026-10-28', 'TOR', 1, 'BOS', 4), game('2026-10-28', 'EDM', 2, 'CGY', 1)] },
-    { date: '2026-10-30', games: [game('2026-10-30', 'TOR', 3, 'MTL', 2), game('2026-10-30', 'EDM', 2, 'VAN', 3, 'OT')] },
-    { date: '2026-11-01', games: [game('2026-11-01', 'OTT', 1, 'TOR', 5), game('2026-11-01', 'SEA', 4, 'EDM', 1)] },
-    { date: '2026-11-03', games: [game('2026-11-03', 'TOR', 4, 'BUF', 3, 'SO'), game('2026-11-03', 'EDM', 2, 'NJD', 3, 'SO'),
-      game('2026-11-03', 'BOS', 0, 'MTL', 0, 'REG', 'FUT')] },
-  ] }];
-  // Samma sida två gånger ska inte dubbelräkna
-  const t = computeTrends([...pages, ...pages]);
-  assert.deepEqual(t.get('TOR'), { trend: 'up', last: ['W', 'W', 'W'] });
-  assert.deepEqual(t.get('EDM'), { trend: 'down', last: ['OTL', 'L', 'OTL'] });
-  assert.equal(t.get('BOS').trend, null); // bara en avgjord match
-  assert.deepEqual(t.get('BUF').last, ['OTL']);
+  const pages = [{ gameWeek: [] }];
+  const day = (n) => `2026-10-${String(n).padStart(2, '0')}`;
+  const add = (n, away, as, home, hs, extra = 'REG') => {
+    pages[0].gameWeek.push({ date: day(n), games: [{
+      id: ++id, gameType: 2, gameState: 'OFF', startTimeUTC: `${day(n)}T23:00:00Z`,
+      awayTeam: { abbrev: away, score: as }, homeTeam: { abbrev: home, score: hs }, gameOutcome: { lastPeriodType: extra },
+    }] });
+  };
+  // TOR: 8 vinster, 1 förlust, 1 förlust efter förlängning – 4 raka vinster på slutet
+  add(1, 'TOR', 4, 'AAA', 1); add(2, 'TOR', 3, 'AAA', 2); add(3, 'TOR', 1, 'AAA', 4); add(4, 'TOR', 5, 'AAA', 2);
+  add(5, 'TOR', 2, 'AAA', 3, 'OT'); add(6, 'TOR', 4, 'AAA', 0); add(7, 'TOR', 3, 'AAA', 1); add(8, 'TOR', 5, 'AAA', 1);
+  add(9, 'TOR', 4, 'AAA', 2); add(10, 'TOR', 4, 'AAA', 3, 'SO');
+  // Äldre match (utanför senaste 10) ska inte påverka
+  add(0, 'TOR', 0, 'AAA', 9);
+  const f = computeForm([...pages, ...pages]); // dubbletter ignoreras
+  const tor = f.get('TOR');
+  assert.equal(tor.gp, 10);
+  assert.deepEqual([tor.w, tor.l, tor.otl], [8, 1, 1]);
+  assert.equal(tor.streak, 5);           // 4 raka + straffvinsten sist
+  assert.deepEqual([tor.gf, tor.ga], [34, 19]); // straffmålet räknas inte: 4–3 SO blir 3–3
+  assert.equal(tor.index, 79);                   // 100·(0,4·0,7 + 0,35·0,75 + 0,25·1)
+  assert.equal(tor.trend, 'up');
+  assert.ok(tor.index >= 35);
+  const aaa = f.get('AAA');
+  assert.equal(aaa.trend, 'down');
+  assert.equal(aaa.streak, -5);          // förlust efter straffar räknas som förlust i raden
+  assert.equal(aaa.index, -71);                  // 100·(0,4·−0,5 + 0,35·−0,75 + 0,25·−1)
+});
+
+test('computeForm: för få matcher ger inget index', () => {
+  const pages = [{ gameWeek: [{ date: '2026-10-10', games: [{
+    id: 1, gameType: 2, gameState: 'OFF', startTimeUTC: '2026-10-10T23:00:00Z',
+    awayTeam: { abbrev: 'X', score: 5 }, homeTeam: { abbrev: 'Y', score: 0 }, gameOutcome: { lastPeriodType: 'REG' },
+  }] }] }];
+  const f = computeForm(pages);
+  assert.equal(f.get('X').index, null);
+  assert.equal(f.get('X').trend, null);
+  assert.equal(f.get('X').streak, 1);
 });
 
 test('buildWeek: B2B när motståndaren spelade dagen före perioden (historik)', () => {

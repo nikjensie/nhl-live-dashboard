@@ -869,14 +869,17 @@ function renderWeek(w) {
   const max = Math.max(...counts), min = Math.min(...counts);
   const today = w.which === 'current' ? w.start : null; // perioden börjar idag (östkustdatum)
   const logos = Object.fromEntries(w.teams.map((t) => [t.abbrev, t.logo]));
-  // Motståndarens form: ▲ tre raka vinster, ▼ tre raka förluster
-  const formOf = Object.fromEntries(w.teams.map((t) => [t.abbrev, {
-    trend: t.trend, txt: (t.last || []).map((r) => ({ W: 'V', L: 'F', OTL: 'Fö' }[r] || r)).join(' '),
-  }]));
+  // Motståndarens form (index ur senaste 10 + aktuell rad): ▲ stark form, ▼ svag form
+  const fmtSigned = (n) => (n > 0 ? `+${n}` : n < 0 ? `−${-n}` : '0');
+  const formOf = Object.fromEntries(w.teams.map((t) => {
+    const f = t.form;
+    const txt = f && f.gp ? `form ${fmtSigned(f.index ?? 0)} (senaste ${f.gp}: ${f.w}–${f.l}–${f.otl}, mål ${f.gf}–${f.ga}, ${f.streak > 0 ? `${f.streak} raka vinster` : `${-f.streak} raka förluster`})` : '';
+    return [t.abbrev, { trend: f?.trend || null, txt }];
+  }));
   const arrow = (ab) => {
     const f = formOf[ab];
-    if (f?.trend === 'up') return '<span class="tr up" aria-label="vunnit 3 raka">▲</span>';
-    if (f?.trend === 'down') return '<span class="tr down" aria-label="förlorat 3 raka">▼</span>';
+    if (f?.trend === 'up') return '<span class="tr up" aria-label="stark form">▲</span>';
+    if (f?.trend === 'down') return '<span class="tr down" aria-label="svag form">▼</span>';
     return '';
   };
   const lg = (url) => url ? `<img src="${esc(darkLogo(url))}" alt="" loading="lazy" onerror="this.style.visibility='hidden'">` : '';
@@ -891,7 +894,7 @@ function renderWeek(w) {
     const cells = w.days.map((d) => {
       const g = byDate.get(d.date);
       if (!g) return `<td class="${d.date === today ? 'today' : ''}"></td>`;
-      const title = `${g.home ? 'Hemma mot' : 'Borta mot'} ${g.opp}${g.state === 'final' ? ' (spelad)' : g.state === 'live' ? ' (pågår)' : ''}${g.oppB2b ? ` · ${g.opp} spelade dagen innan` : ''}${formOf[g.opp]?.txt ? ` · ${g.opp} senaste: ${formOf[g.opp].txt}` : ''}`;
+      const title = `${g.home ? 'Hemma mot' : 'Borta mot'} ${g.opp}${g.state === 'final' ? ' (spelad)' : g.state === 'live' ? ' (pågår)' : ''}${g.oppB2b ? ` · ${g.opp} spelade dagen innan` : ''}${formOf[g.opp]?.txt ? ` · ${g.opp} ${formOf[g.opp].txt}` : ''}`;
       return `<td class="g ${g.state} ${d.date === today ? 'today' : ''}" title="${esc(title)}">
         <span class="opp">${lg(logos[g.opp])}<b>${g.home ? '' : '@'}${esc(g.opp)}${arrow(g.opp)}</b></span>${g.oppB2b ? '<i class="b2b">B2B</i>' : ''}</td>`;
     }).join('');
@@ -903,7 +906,7 @@ function renderWeek(w) {
       <thead><tr><th class="tm">Lag</th><th class="cnt">Antal</th>${head}</tr></thead>
       <tbody>${rows}</tbody>
     </table>
-    <p class="wk-note"><b>@</b> = bortamatch · <i class="b2b">B2B</i> = motståndaren spelade dagen innan · gråa rutor är redan spelade · <span class="tr up">▲</span>/<span class="tr down">▼</span> = motståndaren har vunnit/förlorat sina 3 senaste (förluster efter förlängning/straffar räknas som förluster).</p>`;
+    <p class="wk-note"><b>@</b> = bortamatch · <i class="b2b">B2B</i> = motståndaren spelade dagen innan · gråa rutor är redan spelade · <span class="tr up">▲</span>/<span class="tr down">▼</span> = motståndaren är i stark/svag form (formindex ur senaste 10 matcherna och aktuell rad – håll muspekaren över en match för detaljer).</p>`;
 }
 
 for (const b of document.querySelectorAll('.viewnav button')) b.addEventListener('click', () => setView(b.dataset.view));

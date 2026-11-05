@@ -6,7 +6,7 @@
 - **Radio** – lagloggorna i matchkortets topprad startar lagets egen radiosändning (samma strömmar som NHL.com använder). Ljudet spelas i en liten spelare längst ned; Safari spelar strömmen direkt, övriga webbläsare via hls.js (`public/vendor/`, Apache-2.0). Länkarna finns medan matchen pågår (`api/radio.js`).
 - **Nattens mål** – alla mål från dagens matcher, senaste först (kan vändas). Nya mål blinkar på matchkortet, dyker upp som notis och markeras i feeden. Med högtalarknappen i toppen spelas ett målhorn i arenastil (syntetiserat i webbläsaren). Under varje mål i lika numerär eller boxplay visas vilka utespelare som var på isen och vem som fick + respektive − (inte för PP- eller straffslagsmål, enligt NHL:s regler). Uppgifterna kommer från NHL:s bytesdata, som publiceras med några minuters fördröjning.
 - **Fantasy** – logga in med Yahoo. Kategoriligor visar vinster/förluster per kategori, poängligor visar poäng och prognos. Spelare i ditt lag markeras **orange** och motståndarens **ljusblå** överallt i appen (målfeed, +/-, boxscore, notiser), med ligatagg om du är med i flera ligor. Bänk- och IR-spelare får streckad markering. "Bara matchups" i målkolumnen filtrerar fram mål som berör dina matchups. Yahoo och NHL har olika spelar-ID, så kopplingen görs på lag + efternamn + förnamnsinitial (`public/marks.js`).
-- **Vecka** – egen vy (växeln Live/Vecka i toppen, fliken Vecka på mobilen) med antal matcher och motståndare per lag och dag för innevarande vecka (idag–söndag) eller nästa vecka (mån–sön). Bortamatcher markeras med @, B2B när motståndaren spelade dagen innan, lagen med flest/färst matcher färgmarkeras, och en grön ▲ / röd ▼ vid motståndaren i cellen visar att motståndaren vunnit respektive förlorat sina tre senaste (förluster efter förlängning/straffar räknas som förluster) – praktiskt för fantasy-streaming (`api/week.js`, `lib/week.js`).
+- **Vecka** – egen vy (växeln Live/Vecka i toppen, fliken Vecka på mobilen) med antal matcher och motståndare per lag och dag för innevarande vecka (idag–söndag) eller nästa vecka (mån–sön). Bortamatcher markeras med @, B2B när motståndaren spelade dagen innan, lagen med flest/färst matcher färgmarkeras, och en grön ▲ / röd ▼ vid motståndaren i cellen visar motståndarens form enligt ett formindex (se nedan) (förluster efter förlängning/straffar räknas som förluster) – praktiskt för fantasy-streaming (`api/week.js`, `lib/week.js`).
 - **Tema** – knappen i toppen växlar mellan Auto (följer enhetens inställning), Ljust och Mörkt. Valet sparas i webbläsaren, och lagloggorna byter till NHL:s variant för ljus respektive mörk bakgrund.
 - **Mobil** – tre flikar längst ned: Matcher, Mål (med räknare för nya mål) och Fantasy.
 
@@ -77,6 +77,19 @@ dev-server.js          Lokal server som kör api/ som Vercel gör
 ## Hur spelsituationen räknas ut
 
 NHL anger en `situationCode` med fyra siffror: bortamålvakt, bortautespelare, hemmautespelare, hemmamålvakt. `1451` betyder alltså att bortalaget har fyra utespelare mot hemmalagets fem, dvs. hemmalaget spelar powerplay. När en målvakt är uttagen (`0`) räknas den extra utespelaren inte som numerärt överläge, så `0651` visas som *Tom bur* och inte som powerplay.
+
+## Formindex (veckoschemat)
+
+Bygger på de lagmått som definieras i [jordanpolischuk/nhl_trend_tracker](https://github.com/jordanpolischuk/nhl_trend_tracker) (`fact_team_day`: vinstrad samt vinster och mål för/emot över de senaste 10 matcherna). Repot innehåller ännu ingen färdig formel, så vägningen är vår egen (`lib/week.js`, `computeForm`):
+
+```
+index = 100 · (0,40·P + 0,35·M + 0,25·R)      −100 … +100
+P = (poängprocent − 0,5) · 2                  poängprocent = (2·V + Fö) / (2·matcher), senaste 10
+M = clamp(målskillnad per match, ±2) / 2      straffmål räknas inte
+R = clamp(win_streak, ±5) / 5                 + raka vinster, − raka förluster (även efter förl./straffar)
+```
+
+▲ vid index ≥ +35, ▼ vid ≤ −35, minst 5 spelade matcher. Underlaget är NHL:s schema för de senaste 28 dagarna. xG ingår inte eftersom NHL inte publicerar det per match i de öppna API:erna.
 
 ## Om måltiderna
 
