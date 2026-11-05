@@ -869,6 +869,16 @@ function renderWeek(w) {
   const max = Math.max(...counts), min = Math.min(...counts);
   const today = w.which === 'current' ? w.start : null; // perioden börjar idag (östkustdatum)
   const logos = Object.fromEntries(w.teams.map((t) => [t.abbrev, t.logo]));
+  // Motståndarens form: ▲ tre raka vinster, ▼ tre raka förluster
+  const formOf = Object.fromEntries(w.teams.map((t) => [t.abbrev, {
+    trend: t.trend, txt: (t.last || []).map((r) => ({ W: 'V', L: 'F', OTL: 'Fö' }[r] || r)).join(' '),
+  }]));
+  const arrow = (ab) => {
+    const f = formOf[ab];
+    if (f?.trend === 'up') return '<span class="tr up" aria-label="vunnit 3 raka">▲</span>';
+    if (f?.trend === 'down') return '<span class="tr down" aria-label="förlorat 3 raka">▼</span>';
+    return '';
+  };
   const lg = (url) => url ? `<img src="${esc(darkLogo(url))}" alt="" loading="lazy" onerror="this.style.visibility='hidden'">` : '';
 
   const head = w.days.map((d) => {
@@ -881,17 +891,11 @@ function renderWeek(w) {
     const cells = w.days.map((d) => {
       const g = byDate.get(d.date);
       if (!g) return `<td class="${d.date === today ? 'today' : ''}"></td>`;
-      const title = `${g.home ? 'Hemma mot' : 'Borta mot'} ${g.opp}${g.state === 'final' ? ' (spelad)' : g.state === 'live' ? ' (pågår)' : ''}${g.oppB2b ? ` · ${g.opp} spelade dagen innan` : ''}`;
+      const title = `${g.home ? 'Hemma mot' : 'Borta mot'} ${g.opp}${g.state === 'final' ? ' (spelad)' : g.state === 'live' ? ' (pågår)' : ''}${g.oppB2b ? ` · ${g.opp} spelade dagen innan` : ''}${formOf[g.opp]?.txt ? ` · ${g.opp} senaste: ${formOf[g.opp].txt}` : ''}`;
       return `<td class="g ${g.state} ${d.date === today ? 'today' : ''}" title="${esc(title)}">
-        <span class="opp">${lg(logos[g.opp])}<b>${g.home ? '' : '@'}${esc(g.opp)}</b></span>${g.oppB2b ? '<i class="b2b">B2B</i>' : ''}</td>`;
+        <span class="opp">${lg(logos[g.opp])}<b>${g.home ? '' : '@'}${esc(g.opp)}${arrow(g.opp)}</b></span>${g.oppB2b ? '<i class="b2b">B2B</i>' : ''}</td>`;
     }).join('');
-    const form = (t.last || []).map((r) => ({ W: 'V', L: 'F', OTL: 'Fö' }[r] || r)).join(' ');
-    const trend = t.trend === 'up'
-      ? `<span class="tr up" title="Vunnit sina 3 senaste (${form})" aria-label="Vunnit 3 raka">▲</span>`
-      : t.trend === 'down'
-        ? `<span class="tr down" title="Förlorat sina 3 senaste (${form})" aria-label="Förlorat 3 raka">▼</span>`
-        : '<span class="tr" aria-hidden="true"></span>';
-    return `<tr><th class="tm"><span class="tmi">${lg(t.logo)}<span class="ab">${esc(t.abbrev)}</span>${trend}<span class="nm" title="${form ? `Senaste: ${form}` : ''}">${esc(t.name)}</span></span></th>
+    return `<tr><th class="tm"><span class="tmi">${lg(t.logo)}<span class="ab">${esc(t.abbrev)}</span><span class="nm">${esc(t.name)}</span></span></th>
       <td class="cnt ${cls}"><span>${t.count}</span></td>${cells}</tr>`;
   }).join('');
   $('#wkTable').innerHTML = `
@@ -899,7 +903,7 @@ function renderWeek(w) {
       <thead><tr><th class="tm">Lag</th><th class="cnt">Antal</th>${head}</tr></thead>
       <tbody>${rows}</tbody>
     </table>
-    <p class="wk-note"><b>@</b> = bortamatch · <i class="b2b">B2B</i> = motståndaren spelade dagen innan · gråa rutor är redan spelade · <span class="tr up">▲</span> vunnit 3 raka · <span class="tr down">▼</span> förlorat 3 raka (även efter förlängning/straffar).</p>`;
+    <p class="wk-note"><b>@</b> = bortamatch · <i class="b2b">B2B</i> = motståndaren spelade dagen innan · gråa rutor är redan spelade · <span class="tr up">▲</span>/<span class="tr down">▼</span> = motståndaren har vunnit/förlorat sina 3 senaste (förluster efter förlängning/straffar räknas som förluster).</p>`;
 }
 
 for (const b of document.querySelectorAll('.viewnav button')) b.addEventListener('click', () => setView(b.dataset.view));

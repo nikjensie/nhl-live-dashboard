@@ -636,4 +636,4 @@ body[data-view="week"] .datenav { visibility: hidden; } /* behåll toppradens la
 .tr.up { color: var(--pp); }
 .tr.down { color: var(--sh); }
 .wk th.tm .ab { min-width: 0; }
-.wk .tmi .tr { margin-left: -3px; width: 12px; }
+.wk td.g .tr { font-size: 9px; margin-left: 2px; vertical-align: 1px; }
