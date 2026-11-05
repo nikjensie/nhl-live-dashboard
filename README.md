@@ -101,7 +101,7 @@ R = clamp(win_streak, ±5) / 5                 + raka vinster, − raka förlust
 2. **Form:** formindexet från veckoschemat (±8 % egna mål, ±5 % motståndarens).
 3. **Inbördes möten:** de 5 senaste mötena denna och förra säsongen (NHL), ±2 % per mål i snittmålskillnad.
 4. **Skador:** ESPN:s skadelista viktad med spelarnas poäng per match (NHL). Spelare vars förväntade återkomst är matchdagen räknas som tillbaka och ger ett lyft.
-5. **Startmålvakter:** ESPN:s *Confirmed/Expected*; startmålvaktens räddningsprocent mot lagets snitt justerar motståndarens förväntade mål (±15 %).
+5. **Startmålvakter:** ESPN:s *Confirmed/Expected*; startmålvaktens räddningsprocent mot lagets snitt justerar motståndarens förväntade mål (max ±10 %, målvakter med få matcher dras mot ligasnittet).
 6. **Back-to-back:** lag som spelade dagen innan −4 % egna mål, +3 % insläppta.
 
 Vinstchans = sannolikheten att vinna i ordinarie tid + andelen av oavgjort som avgörs i förlängning/straffar efter relativ styrka. Det visade resultatet är det mest sannolika där favoriten vinner (eller vinst i förlängning om oavgjort efter 60 min är mest sannolikt).
