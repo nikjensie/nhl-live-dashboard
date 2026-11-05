@@ -1,5 +1,5 @@
 // Rinkside – frontend. Inga beroenden.
-import { demoScores, demoFantasy, demoOnIce } from './demo.js';
+import { demoScores, demoFantasy, demoOnIce, demoPredictions } from './demo.js';
 import { unlock, isUnlocked, playHorn } from './horn.js';
 import { buildIndex, summarize } from './marks.js';
 import * as radio from './radio.js';
@@ -32,6 +32,8 @@ const state = {
   marks: buildIndex(null),   // fantasyspelare (Yahoo-trupper)
   onlyMine: store.get('rs.onlyMine', false),
   onice: new Map(),
+  preds: null,               // { date, games: { id: {...} } }
+  showPreds: store.get('rs.preds', true),
   boxData: new Map(),        // gameId -> { at, data, loading } – NHL:s officiella boxscore
   boxAll: false,             // visa alla utespelare i boxscoren         // gameId -> { goals, at, loading, failed }
 };
@@ -81,6 +83,7 @@ async function fetchScores() {
     state.fetchedAt = Date.now();
     renderAll();
     refreshOnIce();
+    fetchPreds();
   } catch (err) {
     console.error(err);
     $('#updated').textContent = 'Kunde inte uppdatera – försöker igen';
@@ -307,10 +310,10 @@ function gameCard(g) {
   }
 
   return `
-    <article class="game ${g.state} ${banner ? 'goal-flash' : ''}" data-id="${g.id}" ${g.state !== 'pre' ? 'tabindex="0" role="button" aria-label="Visa boxscore"' : ''}>
+    <article class="game ${g.state} ${banner ? 'goal-flash' : ''} ${predFor(g) ? 'has-pred' : ''}" data-id="${g.id}" ${g.state !== 'pre' || predFor(g) ? `tabindex="0" role="button" aria-label="${g.state === 'pre' ? 'Visa prognos' : 'Visa boxscore'}"` : ''}>
       <div class="g-top">${top}${radioBtns}${nhl}</div>
       <div class="g-teams">${teamRow(g.away, g.home, g)}${teamRow(g.home, g.away, g)}</div>
-      ${sit}${foot}${banner}
+      ${predCard(g)}${sit}${foot}${banner}
     </article>`;
 }
 
@@ -511,6 +514,7 @@ function renderBox() {
   if (!state.boxId || !state.scores) return;
   const g = state.scores.games.find((x) => x.id === state.boxId);
   if (!g) { closeBox(); return; }
+  if (g.state === 'pre') { renderPredBox(g); return; }
   const goals = state.scores.goals
     .filter((x) => x.gameId === g.id)
     .sort((a, b) => a.period - b.period || a.timeInPeriod.localeCompare(b.timeInPeriod));
@@ -648,11 +652,146 @@ function renderBox() {
       <div class="bh-team home"><div><b>${esc(g.home.abbrev)}</b><span>${esc(g.home.name)}</span></div>${logo(g.home)}</div>
     </header>
     ${line}
+    ${predFor(g) ? predDetails(g, true) : ''}
     <section class="box-goals">${goalList || '<p class="none">Inga mål än.</p>'}</section>
     <section class="box-pts">${ptsHtml}</section>
     ${footNote}
     <a class="box-gc" href="${esc(gcUrl)}" target="_blank" rel="noopener">Hela matchen på NHL.com ↗</a>`;
 }
+
+// ---------- Prognoser ----------
+async function fetchPreds() {
+  const s = state.scores;
+  if (!s || !state.showPreds) return;
+  const date = s.date;
+  if (state.preds?.date === date && Date.now() - state.preds.at < 5 * 60_000) return;
+  if (fetchPreds.busy) return;
+  fetchPreds.busy = true;
+  try {
+    let data;
+    if (DEMO) data = demoPredictions(s);
+    else {
+      const r = await fetch(`/api/predictions?date=${date}`);
+      if (!r.ok) throw new Error(r.status);
+      data = await r.json();
+    }
+    if (state.scores?.date !== date) return;
+    state.preds = { date, at: Date.now(), games: data.games || {}, opensAt: data.opensAt };
+    renderGames();
+    renderBox();
+  } catch {
+    state.preds = { date, at: Date.now() - 4 * 60_000, games: state.preds?.date === date ? state.preds.games : {} };
+  } finally {
+    fetchPreds.busy = false;
+  }
+}
+
+function predFor(g) {
+  if (!state.showPreds) return null;
+  return state.preds?.games?.[g.id]?.prediction ? state.preds.games[g.id] : null;
+}
+
+const pct = (x) => `${Math.round(x * 100)} %`;
+const hm = (iso) => (iso ? timeFmt.format(new Date(iso)) : '');
+
+function predScoreText(g, p) {
+  const s = p.score;
+  return `${esc(g.away.abbrev)} ${s.away}–${s.home} ${esc(g.home.abbrev)}${s.ot ? ' (förl.)' : ''}`;
+}
+
+/** Utfall för avslutad match: rätt vinnare, exakt resultat. */
+function predResult(g, p) {
+  if (g.state !== 'final') return null;
+  const winner = g.home.score > g.away.score ? g.home.abbrev : g.away.abbrev;
+  const exact = p.score.home === g.home.score && p.score.away === g.away.score;
+  return { right: p.winner === winner, exact };
+}
+
+function predBar(g, p) {
+  return `<div class="pbar" role="img" aria-label="Vinstchans ${esc(g.away.abbrev)} ${pct(p.awayWin)}, ${esc(g.home.abbrev)} ${pct(p.homeWin)}">
+    <span class="pa ${p.winner === g.away.abbrev ? 'fav' : ''}" style="width:${(p.awayWin * 100).toFixed(1)}%">${esc(g.away.abbrev)} ${pct(p.awayWin)}</span>
+    <span class="ph ${p.winner === g.home.abbrev ? 'fav' : ''}" style="width:${(p.homeWin * 100).toFixed(1)}%">${pct(p.homeWin)} ${esc(g.home.abbrev)}</span>
+  </div>`;
+}
+
+function predCard(g) {
+  const e = predFor(g);
+  if (!e) return '';
+  const p = e.prediction;
+  const conf = Object.values(p.goalies || {}).filter(Boolean);
+  const allConfirmed = conf.length === 2 && conf.every((x) => x.confirmed);
+  if (g.state === 'pre') {
+    const status = e.locked ? `Låst ${hm(e.lockAt)}` : `Prel. ${hm(e.updatedAt)} · låses ${hm(e.lockAt)}`;
+    return `<div class="g-pred">
+      <div class="gp-top"><span class="gp-l">Prognos</span><b class="gp-s">${predScoreText(g, p)}</b>
+        <span class="gp-gk ${allConfirmed ? 'ok' : ''}" title="${allConfirmed ? 'Båda startmålvakterna bekräftade' : 'Startmålvakter ej bekräftade än'}">${allConfirmed ? 'Målvakter ✓' : 'Målvakter ?'}</span></div>
+      ${predBar(g, p)}
+      <div class="gp-meta">${status}</div>
+    </div>`;
+  }
+  const r = predResult(g, p);
+  const verdict = r ? (r.exact ? '<span class="gp-v hit">Exakt rätt</span>' : r.right ? '<span class="gp-v ok">Rätt vinnare</span>' : '<span class="gp-v miss">Fel vinnare</span>') : '';
+  return `<div class="g-pred compact"><span class="gp-l">Prognos</span><b class="gp-s">${predScoreText(g, p)}</b>
+    <span class="gp-p">${esc(p.winner)} ${pct(Math.max(p.homeWin, p.awayWin))}</span>${verdict}</div>`;
+}
+
+function predDetails(g, compact = false) {
+  const e = predFor(g);
+  if (!e) return '';
+  const p = e.prediction;
+  const teams = [g.away, g.home];
+  const gk = (t) => {
+    const x = p.goalies?.[t.abbrev];
+    if (!x) return '<span class="none">ej känd</span>';
+    return `${esc(x.name)}${x.sv != null ? ` <span class="dim">(${(x.sv * 100).toFixed(1)} %)</span>` : ''} <span class="gk-st ${x.confirmed ? 'ok' : ''}">${x.confirmed ? 'bekräftad' : 'trolig'}</span>`;
+  };
+  const inj = (t) => {
+    const x = p.injuries?.[t.abbrev] || { out: [], back: [] };
+    const parts = [];
+    if (x.out.length) parts.push(`<span class="dim">Saknas:</span> ${x.out.map(esc).join(', ')}`);
+    if (x.back.length) parts.push(`<span class="back">Tillbaka:</span> ${x.back.map(esc).join(', ')}`);
+    return parts.join('<br>') || '<span class="none">Inga kända skador</span>';
+  };
+  const h2h = p.h2h?.n
+    ? `<ul class="h2h">${p.h2h.games.map((m) => `<li><span class="dim">${esc(m.date)}</span> ${esc(m.away)} ${m.as}–${m.hs} ${esc(m.home)}${m.so ? ' (str)' : m.ot ? ' (förl.)' : ''}</li>`).join('')}</ul>`
+    : '<span class="none">Inga möten de två senaste säsongerna</span>';
+  const fac = (p.factors || []).slice(0, 8).map((f) => `<li><span class="ft-team">${esc(f.team)}</span> ${esc(f.text)} <span class="eff ${f.effect > 0 ? 'pos' : f.effect < 0 ? 'neg' : ''}">${f.effect > 0 ? '+' : ''}${f.effect} %</span></li>`).join('');
+  const r = predResult(g, p);
+  const status = e.locked ? `Låst ${hm(e.lockAt)} (30 min före nedsläpp)` : `Preliminär, uppdaterad ${hm(e.updatedAt)} · nästa uppdatering inom 30 min · låses ${hm(e.lockAt)}`;
+  return `<section class="box-pred ${compact ? 'compact' : ''}">
+    <div class="bp-head"><h3>Prognos</h3><span class="bp-st">${status}</span></div>
+    <div class="bp-score"><b>${predScoreText(g, p)}</b>${r ? (r.exact ? ' <span class="gp-v hit">Exakt rätt</span>' : r.right ? ' <span class="gp-v ok">Rätt vinnare</span>' : ' <span class="gp-v miss">Fel vinnare</span>') : ''}
+      <span class="dim">Förväntade mål ${p.xg.away.toFixed(2)}–${p.xg.home.toFixed(2)} · förlängning ${pct(p.otChance)}</span></div>
+    ${predBar(g, p)}
+    <div class="bp-grid">
+      <div><h4>Startmålvakter</h4>${teams.map((t) => `<div class="bp-row"><b>${esc(t.abbrev)}</b> ${gk(t)}</div>`).join('')}</div>
+      <div><h4>Skador</h4>${teams.map((t) => `<div class="bp-row"><b>${esc(t.abbrev)}</b> <span>${inj(t)}</span></div>`).join('')}</div>
+      <div><h4>Inbördes möten</h4>${h2h}</div>
+      <div><h4>Det som väger mest</h4><ul class="fac">${fac || '<li class="none">Jämnt – inga tydliga faktorer</li>'}</ul></div>
+    </div>
+    <p class="pm-foot">Statistisk prognos (Poisson) på säsongsstyrka, formindex, inbördes möten, skador, startmålvakter och back-to-back. Inte spelråd.</p>
+  </section>`;
+}
+
+function renderPredBox(g) {
+  const logo = (t) => `<img src="${esc(darkLogo(t.logo))}" alt="" onerror="this.style.visibility='hidden'">`;
+  $('#boxBody').innerHTML = `
+    <header class="box-head">
+      <div class="bh-team">${logo(g.away)}<div><b>${esc(g.away.abbrev)}</b><span>${esc(g.away.name)}</span></div></div>
+      <div class="bh-score"><div class="sc" id="boxTitle" style="font-size:30px">${esc(timeFmt.format(new Date(g.startTimeUTC)))}</div><div class="st">${esc(g.venue || '')}</div></div>
+      <div class="bh-team home"><div><b>${esc(g.home.abbrev)}</b><span>${esc(g.home.name)}</span></div>${logo(g.home)}</div>
+    </header>
+    ${predDetails(g) || '<p class="none">Ingen prognos än – första prognosen läggs kl. 17:00 svensk tid på matchdagen.</p>'}`;
+}
+
+const predToggle = $('#predToggle');
+predToggle.checked = state.showPreds;
+predToggle.addEventListener('change', () => {
+  state.showPreds = predToggle.checked;
+  store.set('rs.preds', state.showPreds);
+  if (state.showPreds) fetchPreds();
+  if (state.scores) { renderGames(); renderBox(); }
+});
 
 // ---------- Tema ----------
 const THEMES = ['auto', 'light', 'dark'];
@@ -925,6 +1064,7 @@ function go(date) {
   state.date = date;
   state.seen = null;
   state.scores = null;
+  state.preds = null;
   $('#games').innerHTML = `<div class="empty">Laddar…</div>`;
   $('#goals').innerHTML = '';
   $('#goalTotal').textContent = '';
@@ -951,13 +1091,13 @@ $('#games').addEventListener('click', (e) => {
   if (rb) { e.stopPropagation(); handleRadio(Number(rb.dataset.radio), rb.dataset.side); return; }
   if (e.target.closest('a')) return;
   const card = e.target.closest('.game[data-id]');
-  if (card && !card.classList.contains('pre')) openBox(Number(card.dataset.id));
+  if (card && (!card.classList.contains('pre') || card.classList.contains('has-pred'))) openBox(Number(card.dataset.id));
 });
 $('#games').addEventListener('keydown', (e) => {
   if (e.key !== 'Enter' && e.key !== ' ') return;
   if (e.target.closest('.rbtn, a')) return;
   const card = e.target.closest('.game[data-id]');
-  if (card && !card.classList.contains('pre')) { e.preventDefault(); openBox(Number(card.dataset.id)); }
+  if (card && (!card.classList.contains('pre') || card.classList.contains('has-pred'))) { e.preventDefault(); openBox(Number(card.dataset.id)); }
 });
 $('#box').addEventListener('click', (e) => {
   if (e.target.closest('[data-close]')) closeBox();

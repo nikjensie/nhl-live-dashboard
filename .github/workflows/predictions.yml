@@ -1,0 +1,19 @@
+# Uppdaterar matchprognoserna var 30:e minut även när ingen har sidan öppen.
+# API:et avgör självt vad som ska göras: första prognos kl. 17:00 svensk tid,
+# ny beräkning var 30:e minut och låsning 30 minuter före nedsläpp.
+name: Uppdatera prognoser
+
+on:
+  schedule:
+    - cron: '0,30 * * * *'
+  workflow_dispatch:
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Anropa prognos-API:et
+        run: |
+          curl -fsS --max-time 60 "https://nhl-live-dashboard.vercel.app/api/predictions?t=$(date +%s)" \
+            | head -c 400; echo

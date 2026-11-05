@@ -155,3 +155,44 @@ export function demoOnIce(scores, gameId) {
   }
   return out;
 }
+
+// Påhittade prognoser för demoläget (samma form som /api/predictions)
+export function demoPredictions(scores) {
+  const games = {};
+  const now = Date.now();
+  scores.games.forEach((g, i) => {
+    const start = Date.parse(g.startTimeUTC);
+    const lockAt = start - 30 * 60000;
+    const homeWin = [0.58, 0.44, 0.63, 0.51, 0.39, 0.55][i % 6];
+    const homeFav = homeWin >= 0.5;
+    const score = homeFav ? { home: 3, away: 2, ot: i % 4 === 3 } : { home: 2, away: 3, ot: false };
+    // Den avslutade matchen (NYR–DET 2–1 OT) får en träff, övriga blandat
+    if (g.state === 'final') Object.assign(score, { home: 1, away: 2, ot: true });
+    games[g.id] = {
+      updatedAt: new Date(Math.min(now, lockAt) - 10 * 60000).toISOString(),
+      lockAt: new Date(lockAt).toISOString(),
+      locked: now >= lockAt,
+      prediction: {
+        xg: { home: homeFav ? 3.21 : 2.64, away: homeFav ? 2.58 : 3.02 },
+        homeWin, awayWin: 1 - homeWin, otChance: 0.21,
+        winner: g.state === 'final' ? g.away.abbrev : (homeFav ? g.home.abbrev : g.away.abbrev),
+        score,
+        goalies: {
+          [g.away.abbrev]: { name: 'Bortamålvakt', sv: 0.912, gp: 9, confirmed: i % 2 === 0 },
+          [g.home.abbrev]: { name: 'Hemmamålvakt', sv: 0.904, gp: 11, confirmed: i % 2 === 0 },
+        },
+        injuries: { [g.away.abbrev]: { out: i === 1 ? ['Viktig Center'] : [], back: [] }, [g.home.abbrev]: { out: [], back: i === 0 ? ['Återvändande Back'] : [] } },
+        h2h: { n: 2, wins: 1, losses: 1, games: [
+          { date: '2026-02-11', home: g.home.abbrev, away: g.away.abbrev, hs: 4, as: 2 },
+          { date: '2025-12-03', home: g.away.abbrev, away: g.home.abbrev, hs: 3, as: 2, ot: true },
+        ] },
+        factors: [
+          { team: g.home.abbrev, text: 'Form +42', effect: 3.4 },
+          { team: g.away.abbrev, text: 'Spelade i går (back-to-back)', effect: -4 },
+          { team: g.home.abbrev, text: 'Inbördes 2 senaste: 1–1', effect: 0.6 },
+        ],
+      },
+    };
+  });
+  return { games };
+}

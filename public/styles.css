@@ -637,3 +637,58 @@ body[data-view="week"] .datenav { visibility: hidden; } /* behåll toppradens la
 .tr.down { color: var(--sh); }
 .wk th.tm .ab { min-width: 0; }
 .wk td.g .tr { font-size: 9px; margin-left: 2px; vertical-align: 1px; }
+
+/* ---------- Prognoser ---------- */
+.switch { display: inline-flex; align-items: center; gap: 7px; cursor: pointer; user-select: none; margin-right: auto; margin-left: 14px; }
+.switch input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.switch .track { position: relative; width: 34px; height: 20px; border-radius: 999px; background: var(--line-strong); transition: background .2s; flex: none; }
+.switch .knob { position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.3); transition: transform .2s; }
+.switch input:checked + .track { background: var(--accent); }
+.switch input:checked + .track .knob { transform: translateX(14px); }
+.switch input:focus-visible + .track { box-shadow: 0 0 0 2px var(--accent); }
+.switch .lbl { font-size: 12.5px; font-weight: 600; color: var(--muted); }
+
+.g-pred { padding: 9px 14px 10px; border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 6px; }
+.g-pred .gp-top { display: flex; align-items: center; gap: 8px; }
+.gp-l { font: 700 11px/1 var(--sans); letter-spacing: .06em; text-transform: uppercase; color: var(--accent); }
+.gp-s { font: 700 16px/1 var(--num); letter-spacing: .03em; }
+.gp-gk { margin-left: auto; font-size: 10.5px; font-weight: 700; color: var(--dim); background: var(--card-2); padding: 2px 6px; border-radius: 5px; }
+.gp-gk.ok { color: var(--pp); background: var(--pp-bg); }
+.gp-meta { font-size: 10.5px; color: var(--dim); }
+.g-pred.compact { flex-direction: row; align-items: center; gap: 8px; flex-wrap: wrap; padding: 7px 14px; }
+.gp-p { font-size: 11.5px; color: var(--muted); font-weight: 600; }
+.gp-v { font: 700 10.5px/1 var(--sans); padding: 3px 6px; border-radius: 5px; margin-left: auto; }
+.gp-v.hit { color: #111; background: var(--goal); }
+.gp-v.ok { color: var(--pp); background: var(--pp-bg); }
+.gp-v.miss { color: var(--sh); background: var(--sh-bg); }
+.pbar { display: flex; height: 18px; border-radius: 6px; overflow: hidden; font: 700 10.5px/18px var(--sans); background: var(--card-2); }
+.pbar span { white-space: nowrap; overflow: hidden; padding: 0 6px; color: var(--muted); background: var(--card-2); min-width: 0; }
+.pbar .ph { text-align: right; }
+.pbar .fav { background: color-mix(in srgb, var(--accent) 22%, transparent); color: var(--text); }
+.pbar .pa { border-right: 2px solid var(--card); }
+
+.box-pred { background: var(--card); border-radius: 12px; padding: 12px 14px; margin: 0 0 16px; display: flex; flex-direction: column; gap: 10px; }
+.box-pred .bp-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.box-pred h3 { margin: 0; color: var(--accent); font: 700 13px/1 var(--num); letter-spacing: .12em; text-transform: uppercase; }
+.box-pred .bp-st { font-size: 11px; color: var(--dim); }
+.box-pred .bp-score { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.box-pred .bp-score b { font: 800 22px/1 var(--num); letter-spacing: .03em; }
+.box-pred .bp-score .gp-v { margin-left: 0; }
+.box-pred .dim { color: var(--dim); font-size: 11.5px; }
+.bp-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 18px; }
+.bp-grid h4 { margin: 0 0 5px; font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+.bp-row { font-size: 12.5px; padding: 2px 0; display: flex; gap: 6px; align-items: baseline; }
+.bp-row > b { font: 700 13px/1 var(--num); min-width: 32px; }
+.gk-st { font-size: 10px; font-weight: 700; padding: 1px 5px; border-radius: 4px; color: var(--dim); background: var(--card-2); }
+.gk-st.ok { color: var(--pp); background: var(--pp-bg); }
+.box-pred .back { color: var(--pp); font-size: 11.5px; }
+.h2h, .fac { list-style: none; margin: 0; padding: 0; font-size: 12.5px; display: flex; flex-direction: column; gap: 3px; }
+.fac .ft-team { font: 700 12px/1 var(--num); color: var(--muted); margin-right: 3px; }
+.fac .eff { font-size: 11px; font-weight: 700; margin-left: 4px; }
+.fac .eff.pos { color: var(--pp); }
+.fac .eff.neg { color: var(--sh); }
+@media (max-width: 600px) {
+  .bp-grid { grid-template-columns: 1fr; }
+  .switch { margin-left: 10px; }
+}
+:root[data-theme="light"] .gp-v.hit { color: #fff; }
