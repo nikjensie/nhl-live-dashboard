@@ -46,3 +46,25 @@ test('buildWeek: räknar matcher, motståndare, hemma/borta och back-to-back', (
   assert.equal(w.teams[0].abbrev, 'TOR'); // flest matcher först
   assert.equal(w.teams.at(-1).count, 0);
 });
+
+import { computeTrends } from '../lib/week.js';
+test('computeTrends: tre raka vinster = upp, tre raka förluster (inkl. förl./straffar) = ned', () => {
+  let id = 0;
+  const game = (date, away, as, home, hs, extra = 'REG', state = 'OFF') => ({
+    id: ++id, gameType: 2, gameState: state, startTimeUTC: `${date}T23:00:00Z`,
+    awayTeam: { abbrev: away, score: as }, homeTeam: { abbrev: home, score: hs }, gameOutcome: { lastPeriodType: extra },
+  });
+  const pages = [{ gameWeek: [
+    { date: '2026-10-28', games: [game('2026-10-28', 'TOR', 1, 'BOS', 4), game('2026-10-28', 'EDM', 2, 'CGY', 1)] },
+    { date: '2026-10-30', games: [game('2026-10-30', 'TOR', 3, 'MTL', 2), game('2026-10-30', 'EDM', 2, 'VAN', 3, 'OT')] },
+    { date: '2026-11-01', games: [game('2026-11-01', 'OTT', 1, 'TOR', 5), game('2026-11-01', 'SEA', 4, 'EDM', 1)] },
+    { date: '2026-11-03', games: [game('2026-11-03', 'TOR', 4, 'BUF', 3, 'SO'), game('2026-11-03', 'EDM', 2, 'NJD', 3, 'SO'),
+      game('2026-11-03', 'BOS', 0, 'MTL', 0, 'REG', 'FUT')] },
+  ] }];
+  // Samma sida två gånger ska inte dubbelräkna
+  const t = computeTrends([...pages, ...pages]);
+  assert.deepEqual(t.get('TOR'), { trend: 'up', last: ['W', 'W', 'W'] });
+  assert.deepEqual(t.get('EDM'), { trend: 'down', last: ['OTL', 'L', 'OTL'] });
+  assert.equal(t.get('BOS').trend, null); // bara en avgjord match
+  assert.deepEqual(t.get('BUF').last, ['OTL']);
+});

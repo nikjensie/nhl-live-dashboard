@@ -885,7 +885,13 @@ function renderWeek(w) {
       return `<td class="g ${g.state} ${d.date === today ? 'today' : ''}" title="${esc(title)}">
         <span class="opp">${lg(logos[g.opp])}<b>${g.home ? '' : '@'}${esc(g.opp)}</b></span>${g.b2b ? '<i class="b2b">B2B</i>' : ''}</td>`;
     }).join('');
-    return `<tr><th class="tm"><span class="tmi">${lg(t.logo)}<span class="ab">${esc(t.abbrev)}</span><span class="nm">${esc(t.name)}</span></span></th>
+    const form = (t.last || []).map((r) => ({ W: 'V', L: 'F', OTL: 'Fö' }[r] || r)).join(' ');
+    const trend = t.trend === 'up'
+      ? `<span class="tr up" title="Vunnit sina 3 senaste (${form})" aria-label="Vunnit 3 raka">▲</span>`
+      : t.trend === 'down'
+        ? `<span class="tr down" title="Förlorat sina 3 senaste (${form})" aria-label="Förlorat 3 raka">▼</span>`
+        : '<span class="tr" aria-hidden="true"></span>';
+    return `<tr><th class="tm"><span class="tmi">${lg(t.logo)}<span class="ab">${esc(t.abbrev)}</span>${trend}<span class="nm" title="${form ? `Senaste: ${form}` : ''}">${esc(t.name)}</span></span></th>
       <td class="cnt ${cls}"><span>${t.count}</span></td>${cells}</tr>`;
   }).join('');
   $('#wkTable').innerHTML = `
@@ -893,7 +899,7 @@ function renderWeek(w) {
       <thead><tr><th class="tm">Lag</th><th class="cnt">Antal</th>${head}</tr></thead>
       <tbody>${rows}</tbody>
     </table>
-    <p class="wk-note"><b>@</b> = bortamatch · <i class="b2b">B2B</i> = match dagen innan också · gråa rutor är redan spelade.</p>`;
+    <p class="wk-note"><b>@</b> = bortamatch · <i class="b2b">B2B</i> = match dagen innan också · gråa rutor är redan spelade · <span class="tr up">▲</span> vunnit 3 raka · <span class="tr down">▼</span> förlorat 3 raka (även efter förlängning/straffar).</p>`;
 }
 
 for (const b of document.querySelectorAll('.viewnav button')) b.addEventListener('click', () => setView(b.dataset.view));
