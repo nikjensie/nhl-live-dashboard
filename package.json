@@ -10,5 +10,8 @@
   "scripts": {
     "dev": "node dev-server.js",
     "test": "node --test test/*.test.js"
+  },
+  "dependencies": {
+    "@vercel/blob": "1.1.1"
   }
 }
