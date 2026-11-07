@@ -700,12 +700,32 @@ function predScoreText(g, p) {
 }
 
 /** Utfall för avslutad match: rätt vinnare, exakt resultat. */
+/**
+ * Utfall för avslutad match.
+ * - Exakt rätt: samma slutresultat och samma avgörande (ordinarie tid resp. förlängning/straffar).
+ * - Prognos sa vinst efter förlängning: "Prognos stämde" bara om matchen gick till förlängning/straffar
+ *   och det lag prognosen pekade ut vann där; annars fel.
+ * - Prognos sa vinst i ordinarie tid: "Rätt vinnare" om det laget vann.
+ */
 function predResult(g, p) {
   if (g.state !== 'final') return null;
   const winner = g.home.score > g.away.score ? g.home.abbrev : g.away.abbrev;
-  const exact = p.score.home === g.home.score && p.score.away === g.away.score;
-  return { right: p.winner === winner, exact };
+  const extra = g.outcome === 'OT' || g.outcome === 'SO';
+  const rightTeam = p.winner === winner;
+  const sameScore = p.score.home === g.home.score && p.score.away === g.away.score;
+  const exact = sameScore && !!p.score.ot === extra; // förlängning eller inte måste också stämma
+  if (p.score.ot) {
+    const ok = rightTeam && extra;
+    return { exact, right: ok, cls: exact ? 'hit' : ok ? 'ok' : 'miss',
+      label: exact ? 'Exakt rätt' : ok ? 'Prognos stämde' : 'Prognos stämde inte',
+      title: ok ? `${winner} vann efter ${g.outcome === 'SO' ? 'straffar' : 'förlängning'}, som prognosen sa`
+        : rightTeam ? `${winner} vann, men i ordinarie tid – prognosen sa förlängning` : `${winner} vann – prognosen sa ${p.winner} efter förlängning` };
+  }
+  return { exact, right: rightTeam, cls: exact ? 'hit' : rightTeam ? 'ok' : 'miss',
+    label: exact ? 'Exakt rätt' : rightTeam ? 'Rätt vinnare' : 'Fel vinnare',
+    title: rightTeam ? `${winner} vann, som prognosen sa` : `${winner} vann – prognosen sa ${p.winner}` };
 }
+const verdictBadge = (r) => (r ? `<span class="gp-v ${r.cls}" title="${esc(r.title)}">${r.label}</span>` : '');
 
 function predBar(g, p) {
   return `<div class="pbar" role="img" aria-label="Vinstchans ${esc(g.away.abbrev)} ${pct(p.awayWin)}, ${esc(g.home.abbrev)} ${pct(p.homeWin)}">
@@ -730,7 +750,7 @@ function predCard(g) {
     </div>`;
   }
   const r = predResult(g, p);
-  const verdict = r ? (r.exact ? '<span class="gp-v hit">Exakt rätt</span>' : r.right ? '<span class="gp-v ok">Rätt vinnare</span>' : '<span class="gp-v miss">Fel vinnare</span>') : '';
+  const verdict = verdictBadge(r);
   return `<div class="g-pred compact"><span class="gp-l">Prognos</span><b class="gp-s">${predScoreText(g, p)}</b>
     <span class="gp-p">${esc(p.winner)} ${pct(Math.max(p.homeWin, p.awayWin))}</span>${verdict}</div>`;
 }
@@ -760,7 +780,7 @@ function predDetails(g, compact = false) {
   const status = e.locked ? `Låst ${hm(e.lockAt)} (30 min före nedsläpp)` : `Preliminär, uppdaterad ${hm(e.updatedAt)} · nästa uppdatering inom 30 min · låses ${hm(e.lockAt)}`;
   return `<section class="box-pred ${compact ? 'compact' : ''}">
     <div class="bp-head"><h3>Prognos</h3><span class="bp-st">${status}</span></div>
-    <div class="bp-score"><b>${predScoreText(g, p)}</b>${r ? (r.exact ? ' <span class="gp-v hit">Exakt rätt</span>' : r.right ? ' <span class="gp-v ok">Rätt vinnare</span>' : ' <span class="gp-v miss">Fel vinnare</span>') : ''}
+    <div class="bp-score"><b>${predScoreText(g, p)}</b>${r ? ' ' + verdictBadge(r) : ''}
       <span class="dim">Förväntade mål ${p.xg.away.toFixed(2)}–${p.xg.home.toFixed(2)} · förlängning ${pct(p.otChance)}</span></div>
     ${predBar(g, p)}
     <div class="bp-grid">
