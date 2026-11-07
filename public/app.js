@@ -701,29 +701,25 @@ function predScoreText(g, p) {
 
 /** Utfall för avslutad match: rätt vinnare, exakt resultat. */
 /**
- * Utfall för avslutad match.
- * - Exakt rätt: samma slutresultat och samma avgörande (ordinarie tid resp. förlängning/straffar).
- * - Prognos sa vinst efter förlängning: "Prognos stämde" bara om matchen gick till förlängning/straffar
- *   och det lag prognosen pekade ut vann där; annars fel.
- * - Prognos sa vinst i ordinarie tid: "Rätt vinnare" om det laget vann.
+ * Utfall för avslutad match:
+ * - SPOT ON!            samma slutresultat och samma avgörande (ordinarie tid resp. förlängning/straffar)
+ * - PROGNOSIS POSITIVE  prognosen sa förlängning, matchen gick till förlängning/straffar och rätt lag vann
+ * - RÄTT VINNARE        rätt lag vann i ordinarie tid
+ * - PROGNOSIS NEGATIVE  fel lag vann, eller prognosen sa ordinarie tid men matchen gick till förlängning
  */
 function predResult(g, p) {
   if (g.state !== 'final') return null;
   const winner = g.home.score > g.away.score ? g.home.abbrev : g.away.abbrev;
   const extra = g.outcome === 'OT' || g.outcome === 'SO';
+  const how = g.outcome === 'SO' ? 'efter straffar' : g.outcome === 'OT' ? 'efter förlängning' : 'i ordinarie tid';
   const rightTeam = p.winner === winner;
-  const sameScore = p.score.home === g.home.score && p.score.away === g.away.score;
-  const exact = sameScore && !!p.score.ot === extra; // förlängning eller inte måste också stämma
-  if (p.score.ot) {
-    const ok = rightTeam && extra;
-    return { exact, right: ok, cls: exact ? 'hit' : ok ? 'ok' : 'miss',
-      label: exact ? 'Exakt rätt' : ok ? 'Prognos stämde' : 'Prognos stämde inte',
-      title: ok ? `${winner} vann efter ${g.outcome === 'SO' ? 'straffar' : 'förlängning'}, som prognosen sa`
-        : rightTeam ? `${winner} vann, men i ordinarie tid – prognosen sa förlängning` : `${winner} vann – prognosen sa ${p.winner} efter förlängning` };
-  }
-  return { exact, right: rightTeam, cls: exact ? 'hit' : rightTeam ? 'ok' : 'miss',
-    label: exact ? 'Exakt rätt' : rightTeam ? 'Rätt vinnare' : 'Fel vinnare',
-    title: rightTeam ? `${winner} vann, som prognosen sa` : `${winner} vann – prognosen sa ${p.winner}` };
+  const exact = p.score.home === g.home.score && p.score.away === g.away.score && !!p.score.ot === extra;
+  const v = (cls, label, title) => ({ cls, label, title, exact: cls === 'hit', right: cls !== 'miss' });
+  if (exact) return v('hit', 'SPOT ON!', `Exakt rätt resultat – ${winner} vann ${how}`);
+  if (!rightTeam) return v('miss', 'PROGNOSIS NEGATIVE', `${winner} vann ${how} – prognosen sa ${p.winner}`);
+  if (extra && p.score.ot) return v('ok', 'PROGNOSIS POSITIVE', `${winner} vann ${how}, som prognosen sa`);
+  if (extra) return v('miss', 'PROGNOSIS NEGATIVE', `${winner} vann, men ${how} – prognosen sa avgörande i ordinarie tid`);
+  return v('ok', 'RÄTT VINNARE', `${winner} vann i ordinarie tid${p.score.ot ? ' (prognosen sa förlängning)' : ''}`);
 }
 const verdictBadge = (r) => (r ? `<span class="gp-v ${r.cls}" title="${esc(r.title)}">${r.label}</span>` : '');
 
