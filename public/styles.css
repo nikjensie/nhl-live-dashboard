@@ -701,3 +701,7 @@ body[data-view="week"] .datenav { visibility: hidden; } /* behåll toppradens la
   .gp-gk .gk-long { display: none; }
   .gp-gk .gk-short { display: inline; }
 }
+/* Utfallet (SPOT ON! / PROGNOSIS POSITIVE / NEGATIVE) alltid på egen rad, vänsterställt */
+.g-pred.compact { flex-wrap: wrap; }
+.g-pred .gp-vrow { flex-basis: 100%; display: flex; justify-content: flex-start; }
+.g-pred .gp-vrow .gp-v { margin-left: 0; }

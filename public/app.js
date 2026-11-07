@@ -748,7 +748,7 @@ function predCard(g) {
   const r = predResult(g, p);
   const verdict = verdictBadge(r);
   return `<div class="g-pred compact"><span class="gp-l">Prognos</span><b class="gp-s">${predScoreText(g, p)}</b>
-    <span class="gp-p">${esc(p.winner)} ${pct(Math.max(p.homeWin, p.awayWin))}</span>${verdict}</div>`;
+    <span class="gp-p">${esc(p.winner)} ${pct(Math.max(p.homeWin, p.awayWin))}</span>${verdict ? `<div class="gp-vrow">${verdict}</div>` : ''}</div>`;
 }
 
 function predDetails(g, compact = false) {
