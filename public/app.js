@@ -33,7 +33,7 @@ const state = {
   onlyMine: store.get('rs.onlyMine', false),
   onice: new Map(),
   preds: null,               // { date, games: { id: {...} } }
-  showPreds: store.get('rs.preds', true),
+  showPreds: store.get('rs.preds', false), // av som standard; valet sparas i webbläsaren
   boxData: new Map(),        // gameId -> { at, data, loading } – NHL:s officiella boxscore
   boxAll: false,             // visa alla utespelare i boxscoren         // gameId -> { goals, at, loading, failed }
 };
