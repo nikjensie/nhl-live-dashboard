@@ -703,8 +703,7 @@ function predScoreText(g, p) {
 /**
  * Utfall för avslutad match:
  * - SPOT ON!            samma slutresultat och samma avgörande (ordinarie tid resp. förlängning/straffar)
- * - PROGNOSIS POSITIVE  prognosen sa förlängning, matchen gick till förlängning/straffar och rätt lag vann
- * - RÄTT VINNARE        prognosen sa ordinarie tid och rätt lag vann i ordinarie tid
+ * - PROGNOSIS POSITIVE  rätt lag vann med rätt avgörande (ordinarie tid resp. förlängning/straffar)
  * - PROGNOSIS NEGATIVE  fel lag vann, eller avgörandet stämde inte (förlängning mot ordinarie tid)
  */
 function predResult(g, p) {
@@ -720,7 +719,7 @@ function predResult(g, p) {
   if (extra && p.score.ot) return v('ok', 'PROGNOSIS POSITIVE', `${winner} vann ${how}, som prognosen sa`);
   if (extra) return v('miss', 'PROGNOSIS NEGATIVE', `${winner} vann, men ${how} – prognosen sa avgörande i ordinarie tid`);
   if (p.score.ot) return v('miss', 'PROGNOSIS NEGATIVE', `${winner} vann, men i ordinarie tid – prognosen sa förlängning`);
-  return v('ok', 'RÄTT VINNARE', `${winner} vann i ordinarie tid, som prognosen sa`);
+  return v('ok', 'PROGNOSIS POSITIVE', `${winner} vann i ordinarie tid, som prognosen sa`);
 }
 const verdictBadge = (r) => (r ? `<span class="gp-v ${r.cls}" title="${esc(r.title)}">${r.label}</span>` : '');
 
