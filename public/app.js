@@ -696,7 +696,7 @@ const hm = (iso) => (iso ? timeFmt.format(new Date(iso)) : '');
 
 function predScoreText(g, p) {
   const s = p.score;
-  return `${esc(g.away.abbrev)} ${s.away}–${s.home} ${esc(g.home.abbrev)}${s.ot ? ' (förl.)' : ''}`;
+  return `${esc(g.away.abbrev)} ${s.away}–${s.home} ${esc(g.home.abbrev)}${s.ot ? ' (OT)' : ''}`;
 }
 
 /** Utfall för avslutad match: rätt vinnare, exakt resultat. */
@@ -740,7 +740,7 @@ function predCard(g) {
     const status = e.locked ? `Låst ${hm(e.lockAt)}` : `Prel. ${hm(e.updatedAt)} · låses ${hm(e.lockAt)}`;
     return `<div class="g-pred">
       <div class="gp-top"><span class="gp-l">Prognos</span><b class="gp-s">${predScoreText(g, p)}</b>
-        <span class="gp-gk ${allConfirmed ? 'ok' : ''}" title="${allConfirmed ? 'Båda startmålvakterna bekräftade' : 'Startmålvakter ej bekräftade än'}">${allConfirmed ? 'Målvakter ✓' : 'Målvakter ?'}</span></div>
+        <span class="gp-gk ${allConfirmed ? 'ok' : ''}" title="${allConfirmed ? 'Båda startmålvakterna bekräftade' : 'Startmålvakter ej bekräftade än'}"><span class="gk-long">Målvakter</span><span class="gk-short">MV</span> ${allConfirmed ? '✓' : '?'}</span></div>
       ${predBar(g, p)}
       <div class="gp-meta">${status}</div>
     </div>`;
@@ -769,7 +769,7 @@ function predDetails(g, compact = false) {
     return parts.join('<br>') || '<span class="none">Inga kända skador</span>';
   };
   const h2h = p.h2h?.n
-    ? `<ul class="h2h">${p.h2h.games.map((m) => `<li><span class="dim">${esc(m.date)}</span> ${esc(m.away)} ${m.as}–${m.hs} ${esc(m.home)}${m.so ? ' (str)' : m.ot ? ' (förl.)' : ''}</li>`).join('')}</ul>`
+    ? `<ul class="h2h">${p.h2h.games.map((m) => `<li><span class="dim">${esc(m.date)}</span> ${esc(m.away)} ${m.as}–${m.hs} ${esc(m.home)}${m.so ? ' (SO)' : m.ot ? ' (OT)' : ''}</li>`).join('')}</ul>`
     : '<span class="none">Inga möten de två senaste säsongerna</span>';
   const fac = (p.factors || []).slice(0, 8).map((f) => `<li><span class="ft-team">${esc(f.team)}</span> ${esc(f.text)} <span class="eff ${f.effect > 0 ? 'pos' : f.effect < 0 ? 'neg' : ''}">${f.effect > 0 ? '+' : ''}${f.effect} %</span></li>`).join('');
   const r = predResult(g, p);

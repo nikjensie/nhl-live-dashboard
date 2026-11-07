@@ -692,3 +692,12 @@ body[data-view="week"] .datenav { visibility: hidden; } /* behåll toppradens la
   .switch { margin-left: 10px; }
 }
 :root[data-theme="light"] .gp-v.hit { color: #fff; }
+/* Prognosraden ska rymmas på en rad även i smala matchkort */
+.g-pred .gp-top { flex-wrap: nowrap; min-width: 0; }
+.g-pred .gp-s { white-space: nowrap; }
+.gp-gk { white-space: nowrap; }
+.gp-gk .gk-short { display: none; }
+@container (max-width: 360px) {
+  .gp-gk .gk-long { display: none; }
+  .gp-gk .gk-short { display: inline; }
+}
