@@ -56,11 +56,18 @@
     <section class="panel panel-games" id="panel-games" aria-label="Matcher">
       <div class="panel-head">
         <h2>Matcher</h2>
-        <label class="switch" title="Visa eller dölj prognoser på matchkorten">
-          <input type="checkbox" id="predToggle" role="switch">
-          <span class="track" aria-hidden="true"><span class="knob"></span></span>
-          <span class="lbl">Prognoser</span>
-        </label>
+        <div class="switches">
+          <label class="switch" title="Visa eller dölj prognoser på matchkorten">
+            <input type="checkbox" id="predToggle" role="switch">
+            <span class="track" aria-hidden="true"><span class="knob"></span></span>
+            <span class="lbl">Prognoser</span>
+          </label>
+          <label class="switch" title="Visa slutresultatet på alla avslutade matcher (av = dolda, så att du kan se matcherna i efterhand)">
+            <input type="checkbox" id="resultsToggle" role="switch">
+            <span class="track" aria-hidden="true"><span class="knob"></span></span>
+            <span class="lbl">Visa alla slutresultat</span>
+          </label>
+        </div>
         <div class="legend">
           <span class="chip ev">Even Strength</span>
           <span class="chip pp">Power Play</span>
@@ -81,6 +88,7 @@
             <button id="sortGoals" class="textbtn" title="Byt sorteringsordning">Senaste först</button>
           </div>
         </div>
+        <p id="hiddenNote" class="hidden-note" hidden></p>
         <ol id="goals" class="goals"></ol>
       </section>
 
