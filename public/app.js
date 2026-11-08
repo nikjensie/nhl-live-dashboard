@@ -37,23 +37,34 @@ const state = {
   boxData: new Map(),        // gameId -> { at, data, loading } – NHL:s officiella boxscore
   showAllResults: store.get('rs.results', false), // spoilerskydd: slutresultat dolda som standard
   revealed: new Set(store.get('rs.revealed', [])), // matcher vars slutresultat visas ändå
+  hiddenLive: new Set(store.get('rs.hiddenLive', [])), // matcher vars ställning man dolt under pågående match
   boxAll: false,             // visa alla utespelare i boxscoren         // gameId -> { goals, at, loading, failed }
 };
 
 // ---------- Spoilerskydd för slutresultat ----------
-const isHidden = (g) => g?.state === 'final' && !state.showAllResults && !state.revealed.has(g.id);
+// Avslutade matcher: dolda som standard. Pågående: visas, men kan döljas per kort (och förblir då dolda när matchen tar slut).
+const isHidden = (g) => {
+  if (!g || g.state === 'pre') return false;
+  if (state.hiddenLive.has(g.id)) return true;
+  return g.state === 'final' && !state.showAllResults && !state.revealed.has(g.id);
+};
 function saveRevealed() {
   store.set('rs.results', state.showAllResults);
   store.set('rs.revealed', [...state.revealed].slice(-300)); // bara de senaste – gamla matcher rensas
+  store.set('rs.hiddenLive', [...state.hiddenLive].slice(-100));
 }
 function setRevealed(id, on) {
-  if (on) state.revealed.add(id);
-  else if (state.showAllResults) {
-    // Huvudknappen var på: slå av den, men låt övriga avslutade matcher fortsätta synas
-    state.showAllResults = false;
-    for (const g of state.scores?.games || []) if (g.state === 'final' && g.id !== id) state.revealed.add(g.id);
+  const g = state.scores?.games.find((x) => x.id === id);
+  if (on) { state.revealed.add(id); state.hiddenLive.delete(id); }
+  else {
+    if (state.showAllResults) {
+      // Huvudknappen var på: slå av den, men låt övriga avslutade matcher fortsätta synas
+      state.showAllResults = false;
+      for (const x of state.scores?.games || []) if (x.state === 'final' && x.id !== id) state.revealed.add(x.id);
+    }
     state.revealed.delete(id);
-  } else state.revealed.delete(id);
+    if (g?.state === 'live') state.hiddenLive.add(id);
+  }
   saveRevealed();
   syncResultsToggle();
   if (state.scores) { renderGames(); renderGoals(); renderHeader(); renderBox(); }
@@ -104,7 +115,7 @@ async function fetchScores() {
     if (state.scores && state.scores.date === data.date) {
       const was = new Map(state.scores.games.map((g) => [g.id, g.state]));
       let changed = false;
-      for (const g of data.games) if (g.state === 'final' && was.get(g.id) === 'live' && !state.revealed.has(g.id)) { state.revealed.add(g.id); changed = true; }
+      for (const g of data.games) if (g.state === 'final' && was.get(g.id) === 'live' && !state.revealed.has(g.id) && !state.hiddenLive.has(g.id)) { state.revealed.add(g.id); changed = true; }
       if (changed) saveRevealed();
     }
     state.scores = data;
@@ -189,10 +200,12 @@ function detectNewGoals(data) {
     return;
   }
   const fresh = data.goals.filter((g) => !state.seen.has(g.id));
-  if (isToday && fresh.length) goalHorn();
+  // Mål i matcher med dolt resultat: inget horn, ingen notis, ingen blinkning
+  const quiet = (x) => isHidden(data.games.find((g) => g.id === x.gameId));
+  if (isToday && fresh.some((x) => !quiet(x))) goalHorn();
   for (const g of fresh) {
     state.seen.add(g.id);
-    if (!isToday) continue;
+    if (!isToday || quiet(g)) continue;
     state.firstSeen[g.id] = Date.now();
     state.newGoals.add(g.id);
     state.flash.set(g.gameId, { until: Date.now() + 6500, goal: g });
@@ -252,7 +265,7 @@ function teamRow(t, other, g) {
   const s = g.situation;
   let tag = '';
   if (s?.type === 'PP') tag = s.ppTeam === t.abbrev ? '<span class="tsit pp">PP</span>' : '<span class="tsit sh">SH</span>';
-  if (s?.emptyNet?.includes(t.abbrev)) tag += '<span class="tsit en">EN</span>';
+  if (s?.emptyNet?.includes(t.abbrev) && !isHidden(g)) tag += '<span class="tsit en">EN</span>';
   const lead = g.state !== 'pre' && !isHidden(g) && t.score != null && other.score != null
     ? (t.score > other.score ? 'leading' : t.score < other.score ? 'trailing' : '') : '';
   return `
@@ -262,6 +275,14 @@ function teamRow(t, other, g) {
       <div>${tag}</div>
       <div class="tscore${isHidden(g) ? ' hid' : ''}">${g.state === 'pre' ? '' : isHidden(g) ? '–' : t.score ?? 0}</div>
     </div>`;
+}
+
+function resultSwitch(g) {
+  const hid = isHidden(g);
+  const what = g.state === 'live' ? 'ställningen' : 'slutresultatet';
+  return `<label class="switch mini rswitch" title="${hid ? 'Visa' : 'Dölj'} ${what} för den här matchen">
+      <input type="checkbox" role="switch" data-reveal="${g.id}" ${hid ? '' : 'checked'} aria-label="Visa ${what} ${esc(g.away.abbrev)}–${esc(g.home.abbrev)}">
+      <span class="track" aria-hidden="true"><span class="knob"></span></span><span class="lbl">Resultat</span></label>`;
 }
 
 function gameCard(g) {
@@ -275,15 +296,13 @@ function gameCard(g) {
     top = c?.inIntermission
       ? longBreak
         ? `<span class="intermission" title="NHL anger ${mmss(secs)} kvar av pausen">Förlängt uppehåll efter ${esc(periodLabel(g.period, g.periodType))}</span>`
-        : `<span class="intermission">Paus efter ${esc(periodLabel(g.period, g.periodType))}</span>${secs != null ? `<span class="clock stopped" data-clock>${mmss(secs)}</span>` : ''}`
+        : `<span class="intermission">Paus<span class="int-long"> efter</span> ${esc(periodLabel(g.period, g.periodType))}</span>${secs != null ? `<span class="clock stopped" data-clock>${mmss(secs)}</span>` : ''}`
       : `<span class="per">${esc(per)}</span><span class="clock ${c?.running ? '' : 'stopped'}" data-clock>${secs != null ? mmss(secs) : esc(c?.timeRemaining || '')}</span>`;
-    top = `<div class="g-period" data-game="${g.id}">${top}</div><span class="g-state live"><span class="dot"></span>Live</span>`;
+    top = `<div class="g-period" data-game="${g.id}">${top}</div><span class="g-state live"><span class="dot"></span>Live</span>${resultSwitch(g)}`;
   } else if (g.state === 'final') {
     const hid = isHidden(g);
     const suf = !hid && g.outcome && g.outcome !== 'REG' ? ` (${g.outcome === 'SO' ? 'straffar' : 'förl.'})` : '';
-    const sw = `<label class="switch mini rswitch" title="${hid ? 'Visa' : 'Dölj'} slutresultatet för den här matchen">
-        <input type="checkbox" role="switch" data-reveal="${g.id}" ${hid ? '' : 'checked'} aria-label="Visa slutresultat ${esc(g.away.abbrev)}–${esc(g.home.abbrev)}">
-        <span class="track" aria-hidden="true"><span class="knob"></span></span><span class="lbl">Resultat</span></label>`;
+    const sw = resultSwitch(g);
     top = `<div class="g-period"><span class="per">Slut${suf}</span>${hid ? '' : `<span class="g-state">· ${g.goalCount} mål</span>`}</div>${sw}`;
   } else {
     top = `<div class="g-period"><span class="per">${esc(timeFmt.format(new Date(g.startTimeUTC)))}</span></div><span class="g-state">${esc(g.venue)}</span>`;
@@ -291,7 +310,8 @@ function gameCard(g) {
 
   let sit = '';
   const s = g.situation;
-  if (g.state === 'live' && s && !c?.inIntermission) {
+  // Tom bur avslöjar vilket lag som ligger under – visas inte när ställningen är dold
+  if (g.state === 'live' && s && !c?.inIntermission && !(isHidden(g) && s.type !== 'PP')) {
     const ps = s.secondsRemaining ?? toSecs(s.timeRemaining);
     const cls = s.type === 'PP' ? 'pp' : s.emptyNet.length ? 'en' : 'ev';
     let lbl;
@@ -335,7 +355,7 @@ function gameCard(g) {
 
   const fl = state.flash.get(g.id);
   let banner = '';
-  if (fl && fl.until > Date.now()) {
+  if (fl && fl.until > Date.now() && !isHidden(g)) {
     const a = fl.goal.assists.map((x) => esc(x.name)).join(', ');
     banner = `<div class="goal-banner"><div class="big">MÅL!</div><div class="who">${esc(fl.goal.scorer)} · ${esc(fl.goal.team)}</div>${a ? `<div class="ast">Assist: ${a}</div>` : '<div class="ast">Framspelning saknas</div>'}</div>`;
     setTimeout(() => { if (state.flash.get(g.id) === fl) { state.flash.delete(g.id); renderGames(); } }, fl.until - Date.now() + 50);
@@ -381,7 +401,7 @@ function renderGoals() {
   const hiddenGames = new Set(state.scores.games.filter(isHidden).map((g) => g.id));
   const note = $('#hiddenNote');
   note.hidden = !hiddenGames.size;
-  if (hiddenGames.size) note.innerHTML = `Mål från ${hiddenGames.size} ${hiddenGames.size === 1 ? 'avslutad match' : 'avslutade matcher'} är dolda. <button class="textbtn" data-showall>Visa alla slutresultat</button>`;
+  if (hiddenGames.size) note.innerHTML = `Mål från ${hiddenGames.size} ${hiddenGames.size === 1 ? 'match' : 'matcher'} med dolt resultat visas inte. <button class="textbtn" data-showall>Visa alla slutresultat</button>`;
   const goals = state.scores.goals
     .filter((g) => !hiddenGames.has(g.gameId))
     .filter((g) => !filterOn || involvesFantasy(g))
@@ -843,12 +863,12 @@ function renderHiddenBox(g) {
   $('#boxBody').innerHTML = `
     <header class="box-head">
       <div class="bh-team">${logo(g.away)}<div><b>${esc(g.away.abbrev)}</b><span>${esc(g.away.name)}</span></div></div>
-      <div class="bh-score"><div class="sc" id="boxTitle">–<span>–</span>–</div><div class="st">Slut</div></div>
+      <div class="bh-score"><div class="sc" id="boxTitle">–<span>–</span>–</div><div class="st">${g.state === 'live' ? 'Pågår' : 'Slut'}</div></div>
       <div class="bh-team home"><div><b>${esc(g.home.abbrev)}</b><span>${esc(g.home.name)}</span></div>${logo(g.home)}</div>
     </header>
     <div class="box-hidden">
-      <p>Slutresultatet är dolt så att du kan se matchen i efterhand utan att få veta hur det gick.</p>
-      <button class="btn-reveal" data-reveal-box="${g.id}">Visa slutresultat</button>
+      <p>${g.state === 'live' ? 'Ställningen är dold' : 'Slutresultatet är dolt'} så att du kan se matchen utan att få veta hur det går.</p>
+      <button class="btn-reveal" data-reveal-box="${g.id}">${g.state === 'live' ? 'Visa ställningen' : 'Visa slutresultat'}</button>
     </div>`;
 }
 
@@ -858,7 +878,8 @@ function syncResultsToggle() { resultsToggle.checked = state.showAllResults; }
 syncResultsToggle();
 function setShowAll(on) {
   state.showAllResults = on;
-  state.revealed.clear(); // på: allt visas; av: allt döljs
+  state.revealed.clear(); // på: allt visas; av: avslutade matcher döljs
+  if (on) state.hiddenLive.clear();
   saveRevealed();
   syncResultsToggle();
   if (state.scores) { renderGames(); renderGoals(); renderHeader(); renderBox(); }

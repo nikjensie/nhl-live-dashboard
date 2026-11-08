@@ -721,3 +721,8 @@ body[data-view="week"] .datenav { visibility: hidden; } /* behåll toppradens la
 .box-hidden p { margin: 0 0 12px; }
 .btn-reveal { font: 700 13px/1 var(--sans); padding: 10px 16px; border-radius: 8px; border: 0; background: var(--accent); color: #fff; cursor: pointer; }
 @media (max-width: 600px) { .switches { margin-left: 10px; gap: 6px 10px; } }
+/* Pågående matcher: skjutknappen bredvid Live-pricken; i smala kort räcker själva knappen */
+.g-top .g-state.live + .rswitch { margin-left: 4px; }
+.g-top .rswitch + .g-radio { margin-left: 2px; }
+@container (max-width: 400px) { .game.live .rswitch .lbl { display: none; } }
+@container (max-width: 400px) { .game.live .int-long { display: none; } }
