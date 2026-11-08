@@ -9,9 +9,9 @@ import { query, sendJson } from '../lib/http.js';
 // därefter ändras de aldrig (visas även under och efter matchen). Sparas i Vercel Blob.
 const REFRESH_MS = 30 * 60_000;
 const LOCK_BEFORE_MS = 30 * 60_000;
-const OPEN_HOUR_SE = 17; // första preliminära prognosen kl. 17:00 svensk tid på matchdagen
+const OPEN_HOUR_SE = 15; // första preliminära prognosen kl. 15:00 svensk tid på matchdagen
 
-/** UTC-tid (ms) för en lokal klocktid i en tidszon, t.ex. 17:00 i Europe/Stockholm. */
+/** UTC-tid (ms) för en lokal klocktid i en tidszon, t.ex. 15:00 i Europe/Stockholm. */
 export function zonedTime(ymd, hour, minute = 0, tz = 'Europe/Stockholm') {
   const [y, m, d] = ymd.split('-').map(Number);
   let t = Date.UTC(y, m - 1, d, hour, minute);
@@ -34,7 +34,7 @@ export function planFor(game, stored, now, openAt = 0) {
     if (stored.locked || now >= lockAt) return 'keep';
     return now - Date.parse(stored.updatedAt) >= REFRESH_MS ? 'compute' : 'keep';
   }
-  // Ingen sparad prognos: först från kl. 17 svensk tid, och aldrig efter att matchen börjat
+  // Ingen sparad prognos: först från kl. 15 svensk tid, och aldrig efter att matchen börjat
   return game.state === 'pre' && now >= openAt && now < start ? 'compute' : 'none';
 }
 

@@ -797,7 +797,7 @@ function renderPredBox(g) {
       <div class="bh-score"><div class="sc" id="boxTitle" style="font-size:30px">${esc(timeFmt.format(new Date(g.startTimeUTC)))}</div><div class="st">${esc(g.venue || '')}</div></div>
       <div class="bh-team home"><div><b>${esc(g.home.abbrev)}</b><span>${esc(g.home.name)}</span></div>${logo(g.home)}</div>
     </header>
-    ${predDetails(g) || '<p class="none">Ingen prognos än – första prognosen läggs kl. 17:00 svensk tid på matchdagen.</p>'}`;
+    ${predDetails(g) || '<p class="none">Ingen prognos än – första prognosen läggs kl. 15:00 svensk tid på matchdagen.</p>'}`;
 }
 
 const predToggle = $('#predToggle');

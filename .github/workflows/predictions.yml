@@ -1,5 +1,5 @@
 # Uppdaterar matchprognoserna var 30:e minut även när ingen har sidan öppen.
-# API:et avgör självt vad som ska göras: första prognos kl. 17:00 svensk tid,
+# API:et avgör självt vad som ska göras: första prognos kl. 15:00 svensk tid,
 # ny beräkning var 30:e minut och låsning 30 minuter före nedsläpp.
 name: Uppdatera prognoser
 
