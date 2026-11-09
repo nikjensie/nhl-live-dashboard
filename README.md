@@ -105,7 +105,7 @@ R = clamp(win_streak, ±5) / 5                 + raka vinster, − raka förlust
 5. **Startmålvakter:** ESPN:s *Confirmed/Expected*; startmålvaktens räddningsprocent mot lagets snitt justerar motståndarens förväntade mål (max ±10 %, målvakter med få matcher dras mot ligasnittet).
 6. **Back-to-back:** lag som spelade dagen innan −4 % egna mål, +3 % insläppta.
 
-Vinstchans = sannolikheten att vinna i ordinarie tid + andelen av oavgjort som avgörs i förlängning/straffar efter relativ styrka. Det visade resultatet är det mest sannolika där favoriten vinner (eller vinst i förlängning om oavgjort efter 60 min är mest sannolikt).
+Vinstchans = sannolikheten att vinna i ordinarie tid + andelen av oavgjort som avgörs i förlängning/straffar efter relativ styrka. Det visade resultatet är ett typiskt resultat, inte det enskilt mest sannolika (som nästan alltid blir 3–2): favoriten vinner, målskillnaden följer vinstchansen (under 53 % → vinst i förlängning, från 57 % → två mål, från 66 % → tre mål) och det totala antalet mål följer summan av lagens förväntade mål.
 
 **Schema och lagring:** kl. 15:00 svensk tid på matchdagen (NHL:s datum) räknas den första prognosen; därefter ny beräkning när den är äldre än 30 minuter, fram till 30 minuter före nedsläpp då den låses. Prognoser sparas i Vercel Blob (`predictions/YYYY-MM-DD.json`) så att den låsta prognosen kan visas och jämföras med resultatet. Matcher utan sparad prognos får ingen i efterhand. `.github/workflows/predictions.yml` anropar API:et var 30:e minut så att det sker även när ingen har sidan öppen.
 

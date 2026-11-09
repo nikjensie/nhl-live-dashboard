@@ -85,3 +85,15 @@ test('predictGame: alla faktorer drar åt rätt håll', () => {
   assert.ok(pG.homeWin < p0.homeWin);
   assert.equal(pG.goalies.VGK.confirmed, true);
 });
+
+test('typiskt resultat: förlängning vid myntkast, större marginal för stora favoriter', () => {
+  const even = outcome(3.0, 3.0);
+  assert.equal(even.score.ot, true);
+  assert.equal(Math.abs(even.score.home - even.score.away), 1);
+  const big = outcome(4.0, 2.2);
+  assert.equal(big.score.ot, false);
+  assert.ok(big.score.home - big.score.away >= 2);
+  const away = outcome(2.4, 3.4);
+  assert.ok(away.score.away > away.score.home);
+  assert.ok(Math.abs(away.score.home + away.score.away - 5.8) <= 1.5);
+});
