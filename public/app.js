@@ -3,6 +3,7 @@ import { demoScores, demoFantasy, demoOnIce, demoPredictions } from './demo.js';
 import { unlock, isUnlocked, playHorn } from './horn.js';
 import { buildIndex, summarize } from './marks.js';
 import * as radio from './radio.js';
+import { initMatchup } from './matchup.js';
 
 const $ = (s, el = document) => el.querySelector(s);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -172,6 +173,18 @@ async function refreshOnIce() {
   if (data === state.scores) { renderGoals(); renderBox(); }
 }
 
+let matchup = null; // Matchup-vyn (sätts vid start)
+// Markeringarna: inklistrade trupper (Matchup) går före Yahoo/demo
+function manualFantasy(r) {
+  if (!r?.me && !r?.opp) return null;
+  const side = (x) => ({ players: (x?.players || []).map((p) => ({ name: p.name, team: p.team, active: p.active })) });
+  return { loggedIn: true, leagues: [{ key: 'manual', name: 'Matchup', me: side(r.me), opp: side(r.opp) }] };
+}
+function rebuildMarks() {
+  const manual = manualFantasy(matchup?.rosters());
+  state.marks = buildIndex(manual || (state.fantasy?.loggedIn ? state.fantasy : null));
+}
+
 async function fetchFantasy() {
   try {
     if (DEMO) state.fantasy = demoFantasy();
@@ -183,7 +196,7 @@ async function fetchFantasy() {
   } catch (err) {
     state.fantasy = { loggedIn: false, error: String(err) };
   }
-  state.marks = buildIndex(state.fantasy?.loggedIn ? state.fantasy : null);
+  rebuildMarks();
   renderAccount();
   renderFantasy();
   if (state.scores) renderAll();
@@ -1056,7 +1069,7 @@ function tick() {
 function setTab(tab) {
   state.tab = tab;
   document.body.dataset.tab = tab;
-  setView(tab === 'week' ? 'week' : 'live', false);
+  setView(tab === 'week' || tab === 'matchup' ? tab : 'live', false);
   for (const b of document.querySelectorAll('.tabbar button')) b.classList.toggle('active', b.dataset.tab === tab);
   if (tab === 'goals') { state.unseenBadge = 0; if (state.scores) renderHeader(); }
   window.scrollTo({ top: 0 });
@@ -1073,10 +1086,12 @@ function setView(view, syncTab = true) {
   for (const b of document.querySelectorAll('.viewnav button')) b.classList.toggle('on', b.dataset.view === view);
   if (syncTab && window.matchMedia('(max-width: 900px)').matches) {
     // Håll mobilens flikrad i synk om vyn byts via desktop-växeln
-    const tab = view === 'week' ? 'week' : (state.tab === 'week' ? 'games' : state.tab);
+    const tab = view === 'week' || view === 'matchup' ? view : (state.tab === 'week' || state.tab === 'matchup' ? 'games' : state.tab);
     if (tab !== state.tab) { setTab(tab); return; }
   }
   if (view === 'week') loadWeek();
+  if (view === 'matchup') matchup?.show(); else matchup?.hide();
+  try { sessionStorage.setItem('rs.view', view); } catch {}
 }
 
 async function loadWeek() {
@@ -1230,6 +1245,12 @@ if (auth) {
   history.replaceState(null, '', location.pathname + (params.toString() ? `?${params}` : ''));
 }
 
+matchup = initMatchup({
+  store, esc,
+  onChange() { rebuildMarks(); if (state.scores) renderAll(); },
+});
+rebuildMarks();
+try { const v = sessionStorage.getItem('rs.view'); if (v === 'week' || v === 'matchup') setView(v); } catch {}
 $('#games').innerHTML = `<div class="empty">Laddar…</div>`;
 fetchScores();
 if (FANTASY || DEMO) fetchFantasy();

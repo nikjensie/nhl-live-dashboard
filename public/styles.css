@@ -726,3 +726,60 @@ body[data-view="week"] .datenav { visibility: hidden; } /* behåll toppradens la
 .g-top .rswitch + .g-radio { margin-left: 2px; }
 @container (max-width: 400px) { .game.live .rswitch .lbl { display: none; } }
 @container (max-width: 400px) { .game.live .int-long { display: none; } }
+
+/* ---------- Matchup (inklistrade Yahoo-trupper) ---------- */
+body[data-view="matchup"] .mview { display: block; }
+body[data-view="matchup"] .layout { display: none; }
+body[data-view="matchup"] .datenav { visibility: hidden; }
+.mu-grid { display: grid; grid-template-columns: minmax(260px, 340px) minmax(0, 1fr) minmax(0, 1fr); gap: 14px; align-items: start; }
+.mu-board, .mu-team { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px; }
+.mu-board { position: sticky; top: 76px; }
+.mu-score { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 8px; margin-bottom: 10px; }
+.mu-score div { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.mu-score div:last-child { align-items: flex-end; text-align: right; }
+.mu-score span { font-size: 12px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mu-score b { font: 800 40px/1 var(--num); }
+.mu-score b.me { color: var(--me); }
+.mu-score b.opp { color: var(--opp); }
+.mu-score i { font-style: normal; color: var(--dim); font-size: 12px; }
+.mu-cats { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.mu-cats th, .mu-cats td { padding: 6px 8px; border-top: 1px solid var(--line); }
+.mu-cats th { font-size: 11.5px; font-weight: 700; color: var(--muted); letter-spacing: .04em; text-align: center; width: 1%; white-space: nowrap; }
+.mu-cats th small { margin-left: 2px; color: var(--dim); }
+.mu-cats td { font: 700 17px/1 var(--num); color: var(--muted); }
+.mu-cats td.a { text-align: left; }
+.mu-cats td.b { text-align: right; }
+.mu-cats tr.w td.a { color: var(--me); }
+.mu-cats tr.l td.b { color: var(--opp); }
+.mu-cats tr.t td { color: var(--text); }
+.mu-note, .mu-hint { color: var(--dim); font-size: 11.5px; margin: 10px 0 0; }
+.mu-team header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.mu-team h3 { margin: 0; font-size: 15px; }
+.mu-tt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.mu-tt span { font-size: 11.5px; color: var(--muted); }
+.mu-team header > h3 { flex: 1; }
+.mu-dot { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+.mu-team.me .mu-dot { background: var(--me); }
+.mu-team.opp .mu-dot { background: var(--opp); }
+.mu-btn { font-size: 12px; font-weight: 600; padding: 6px 10px; border-radius: 8px; background: var(--card-2); border: 1px solid var(--line); color: var(--text); white-space: nowrap; }
+.mu-btn:hover { border-color: var(--line-hover); }
+.mu-btn.ghost { background: transparent; color: var(--muted); }
+.mu-paste { width: 100%; box-sizing: border-box; background: var(--bg-2); color: var(--text); border: 1px dashed var(--line-strong); border-radius: 10px; padding: 10px; font: 13px/1.4 var(--sans); resize: vertical; }
+.mu-paste:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+.mu-msg { font-size: 12.5px; color: var(--strong); background: var(--card-2); border-radius: 8px; padding: 7px 10px; margin: 0 0 8px; }
+.mu-err { color: var(--sh); }
+.mu-list { list-style: none; margin: 0; padding: 0; }
+.mu-list li { display: flex; align-items: center; gap: 10px; padding: 7px 0; border-top: 1px solid var(--line); }
+.mu-list li.bench { opacity: .55; }
+.mu-slot { font: 700 11px/1 var(--sans); color: var(--muted); background: var(--card-2); border-radius: 6px; padding: 4px 0; width: 34px; text-align: center; flex: none; }
+.mu-p { flex: 1; min-width: 0; }
+.mu-n { font-weight: 600; font-size: 13.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mu-tm { color: var(--dim); font-weight: 500; font-size: 11.5px; }
+.mu-st { font-size: 9.5px; font-weight: 700; color: var(--sh); background: var(--sh-bg); border-radius: 4px; padding: 1px 4px; vertical-align: 1px; }
+.mu-l { font-size: 12px; color: var(--muted); margin-top: 2px; }
+.mu-l b { color: var(--text); font-weight: 700; }
+.mu-l .dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--live); margin-right: 5px; vertical-align: 1px; }
+.mu-none { color: var(--dim); }
+.mu-left { font-size: 11px; color: var(--muted); white-space: nowrap; flex: none; }
+@media (max-width: 1100px) { .mu-grid { grid-template-columns: 1fr 1fr; } .mu-board { grid-column: 1 / -1; position: static; } }
+@media (max-width: 700px) { .mu-grid { grid-template-columns: 1fr; } .mu-team header { flex-wrap: wrap; } }

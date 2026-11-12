@@ -13,7 +13,7 @@ const norm = (s) => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-
 /** "Luke Hughes" | "L. Hughes" | "Hughes" -> { init: 'l' | '', last: 'hughes' } */
 export function splitName(name) {
   const s = String(name || '').trim();
-  const m = /^([A-Za-zÀ-ÿ])[A-Za-zÀ-ÿ'-]*\.?\s+(.+)$/.exec(s);
+  const m = /^([A-Za-zÀ-ÿ])[A-Za-zÀ-ÿ.'-]*\s+(.+)$/.exec(s); // även "J.T. Miller"
   if (m) return { init: norm(m[1]), last: norm(m[2]) };
   return { init: '', last: norm(s) };
 }
