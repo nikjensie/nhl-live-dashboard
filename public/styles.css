@@ -793,3 +793,9 @@ body[data-view="matchup"] .datenav { visibility: hidden; }
 .mu-team.opp .mu-fp { color: var(--opp); }
 .mu-fp.neg { color: var(--sh) !important; }
 .mu-list li.bench .mu-fp { color: var(--muted) !important; }
+.mu-base { display: flex; justify-content: space-between; gap: 6px; font-size: 11px; color: var(--muted); margin: 0 0 10px; }
+.mu-base span:nth-child(2) { color: var(--dim); text-align: center; }
+.mu-base span:last-child { text-align: right; }
+.mu-base b { color: var(--text); }
+.mu-sub { margin: 4px 0 2px; font-size: 10.5px; text-transform: uppercase; letter-spacing: .08em; color: var(--dim); text-align: center; font-weight: 700; }
+.mu-msg.warn { color: var(--goal); background: var(--goal-bg); }

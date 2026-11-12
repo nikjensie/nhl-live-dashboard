@@ -48,9 +48,9 @@ export function comparePoints(weights, me, opp) {
 export const DEFAULT_SK = ['G', 'A', '+/-', 'PPP', 'SOG', 'HIT', 'BLK'];
 export const DEFAULT_G = ['W', 'GAA', 'SV%', 'SHO'];
 
-const SLOT = /^(C|LW|RW|F|W|D|Util|UTIL|G|BN|IR\+?|IL\+?|NA|SK|P)$/;
+const SLOT = /^(C|LW|RW|F|W|D|Util|UTIL|G|BN|IR\+?|IL\+?|NA|SK|P|--)$/;
 const TEAMPOS = /^([A-Z]{2,4})\s*-\s*([A-Z]{1,2}(?:\s*,\s*[A-Z]{1,2})*)$/;
-const BENCH = new Set(['BN', 'IR', 'IR+', 'IL', 'IL+', 'NA']);
+const BENCH = new Set(['BN', 'IR', 'IR+', 'IL', 'IL+', 'NA', '--']); // -- = släppt från laget
 
 /** "Nick SuzukiNew Player Note" / "Linus UllmarkDTDPlayer Note" -> { name, status } */
 export function cleanName(raw) {
@@ -62,23 +62,33 @@ export function cleanName(raw) {
 }
 
 /**
- * Tolka text kopierad från Yahoos lagsida (utespelare och målvakter, en eller båda tabellerna).
+ * Tolka text kopierad från Yahoo: lagsidan (ett lag) eller matchup-sidan (båda lagen, med
+ * Yahoos poäng och veckostatistik per spelare). Returnerar en lista med lag.
  * Fungerar med radbrytningar (mobil) och tabbar (dator) mellan cellerna.
  */
-export function parseRoster(text) {
-  const tok = String(text || '').split(/\r?\n|\t/).map((t) => t.replace(/ /g, ' ').trim()).filter(Boolean);
-  const players = [];
+export function parsePaste(text) {
+  const tok = String(text || '').split(/\r?\n|\t/).map((t) => t.replace(/\u00a0/g, ' ').replace(/[\u200b-\u200f\u2060\ufeff\ue000-\uf8ff]/g, '').trim()).filter(Boolean);
+  const teams = [];
   const skCats = [], gCats = [];
-  let team = '', date = '';
+  let cur = null;
+  const newTeam = (o = {}) => { cur = { team: '', manager: '', record: '', total: null, date: '', players: [], ...o }; teams.push(cur); return cur; };
   let header = []; // kandidater till kategorirubriker: { cat, i }
   let inHeader = true;
-  let sectionCats = null;
+  let sectionCats = [];
 
   for (let i = 0; i < tok.length; i++) {
     const t = tok[i];
+    // Matchup-sidan: "logo  49.60" följt av lagnamn, manager och "4-2-0 | 3rd"
+    const logo = /^logo\s+(-?\d+(?:\.\d+)?)$/i.exec(t);
+    if (logo) {
+      newTeam({ total: Number(logo[1]), team: tok[i + 1] || '', manager: tok[i + 2] || '', record: /\|/.test(tok[i + 3] || '') ? tok[i + 3] : '' });
+      i += cur.record ? 3 : 2;
+      inHeader = true; header = [];
+      continue;
+    }
     const title = /^(.+?)['’]s\s.*roster for (\d{4}-\d{2}-\d{2})/i.exec(t);
-    if (title) { team ||= title[1].trim(); date ||= title[2]; continue; }
-    if (/^Starting Lineup Totals/i.test(t)) { inHeader = true; header = []; sectionCats = null; continue; }
+    if (title) { const c = cur || newTeam(); c.team ||= title[1].trim(); c.date ||= title[2]; continue; }
+    if (/^Starting Lineup Totals/i.test(t) || t === 'Pos') { inHeader = true; header = []; continue; }
     const tp = TEAMPOS.exec(t);
     if (tp && i >= 1) {
       const slot = i >= 2 && SLOT.test(tok[i - 2]) ? tok[i - 2] : '';
@@ -93,13 +103,58 @@ export function parseRoster(text) {
         for (const c of sectionCats) if (!into.includes(c)) into.push(c);
         inHeader = false;
       }
-      players.push({ slot: slot.toUpperCase() === 'UTIL' ? 'Util' : slot, name, team: nhlAbbr(tp[1]), pos, goalie, status,
-        active: !BENCH.has(slot.toUpperCase()) });
+      const p = { slot: slot.toUpperCase() === 'UTIL' ? 'Util' : slot, name, team: nhlAbbr(tp[1]), pos, goalie, status,
+        active: !BENCH.has(slot.toUpperCase()) };
+      // Matchup-sidan: Yahoos poäng ("4.70") och veckans statistik i kategoriernas ordning
+      for (let j = i + 1; j <= i + 3 && j < tok.length; j++) {
+        if (/^-?\d+\.\d{2}$/.test(tok[j])) {
+          p.fp = Number(tok[j]);
+          const vals = tok.slice(j + 1, j + 1 + sectionCats.length);
+          // Bara streck = ingen match spelad än i veckan -> ingen Yahoo-statistik att utgå från
+          if (vals.length === sectionCats.length && vals.every((v) => /^(-?\d+(\.\d+)?|-)$/.test(v)) && vals.some((v) => v !== '-')) {
+            p.stats = Object.fromEntries(sectionCats.map((c, k) => [c, vals[k] === '-' ? 0 : Number(vals[k])]));
+          }
+          break;
+        }
+        if (TEAMPOS.test(tok[j]) || SLOT.test(tok[j])) break;
+      }
+      (cur || newTeam()).players.push(p);
       continue;
     }
     if (inHeader && CATS[t]) header.push({ cat: t, i });
   }
-  return { team, date, players, skCats, gCats };
+  const out = teams.filter((x) => x.players.length).map((x) => ({ ...x, skCats, gCats }));
+  return out;
+}
+
+export function parseRoster(text) {
+  return parsePaste(text)[0] || { team: '', date: '', players: [], skCats: [], gCats: [] };
+}
+
+/**
+ * Yahoos egna siffror som bas: lagets poäng vid inklistringen plus det som hänt sedan dess
+ * (NHL-statistik för veckan minus Yahoos statistik per spelare) för spelare på aktiva platser.
+ * Utan Yahoo-siffror (lagsidan) räknas allt från NHL-statistiken.
+ */
+export function deltaStats(p, s) {
+  if (!s) return null;
+  if (!p.stats) return s;
+  const d = { ...s };
+  let short = false;
+  for (const [cat, v] of Object.entries(p.stats)) {
+    const c = CATS[cat];
+    if (!c?.k && cat !== 'L') continue;
+    const have = cat === 'L' ? (s.l || 0) + (s.otl || 0) : s[c.k] || 0;
+    const diff = have - v;
+    if (cat !== '+/-' && diff < 0) short = true; // NHL-datan ligger efter Yahoo (dag saknas, rättelse)
+    if (cat === 'L') { d.l = diff; d.otl = 0; } else d[c.k] = diff;
+  }
+  // Räknestatistik kan inte minska. Saknas något i NHL-datan räknas inget extra för spelaren,
+  // så att Yahoos siffra står kvar i stället för att dras ned av ofullständig data.
+  if (short) {
+    for (const k of Object.keys(d)) if (typeof d[k] === 'number' && !['id', 'gameId'].includes(k)) d[k] = 0;
+  }
+  return d;
 }
 
 const norm = (s) => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z]/g, '');

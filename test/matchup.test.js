@@ -104,3 +104,29 @@ test('fantasyPoints: ligans poängsättning', async () => {
   const t = comparePoints({ G: 2, W: 4 }, { sk: { g: 3 }, gl: { w: 1 } }, { sk: { g: 1 }, gl: { w: 2 } });
   assert.deepEqual(t.total, { me: 10, opp: 10 });
 });
+
+test('parsePaste: matchup-sidan ger båda lagen med Yahoos poäng och statistik', async () => {
+  const { parsePaste, deltaStats, fantasyPoints } = await import('../public/roster.js');
+  const t = parsePaste(readFileSync(new URL('./fixtures/yahoo-matchup.txt', import.meta.url), 'utf8'));
+  assert.equal(t.length, 2);
+  assert.deepEqual([t[0].team, t[0].manager, t[0].total], ['Big Chill', 'Niklas', 49.6]);
+  assert.deepEqual([t[1].team, t[1].total], ['Tomen HC', 57.3]);
+  const suzuki = t[0].players.find((p) => p.name === 'Nick Suzuki');
+  assert.equal(suzuki.fp, 4.7);
+  assert.equal(suzuki.stats.FW, 13);
+  assert.equal(t[0].players.find((p) => p.name === 'Matty Beniers').stats, undefined); // inga matcher än
+  const frost = t[0].players.find((p) => p.name === 'Morgan Frost');
+  assert.equal(frost.slot, '--'); assert.equal(frost.active, false);
+  // Yahoos poäng per spelare stämmer med ligans poängsättning
+  for (const p of t.flatMap((x) => x.players).filter((p) => p.stats)) {
+    const keyed = { g: 0, a: 0, p: 0, pm: 0, ppg: 0, ppa: 0, shg: 0, sha: 0, gwg: 0, sog: 0, fw: 0, fl: 0, hit: 0, blk: 0, w: 0, l: 0, otl: 0, ga: 0, sv: 0, sho: 0 };
+    const map = { G: p.goalie ? null : 'g', A: 'a', P: 'p', '+/-': 'pm', PPG: 'ppg', PPA: 'ppa', SHG: 'shg', SHA: 'sha', GWG: 'gwg', SOG: 'sog', FW: 'fw', FL: 'fl', HIT: 'hit', BLK: 'blk', W: 'w', L: 'l', GA: 'ga', SV: 'sv', SHO: 'sho' };
+    for (const [c, v] of Object.entries(p.stats)) if (map[c]) keyed[map[c]] = v;
+    assert.equal(fantasyPoints(keyed, p.goalie), p.fp, p.name);
+  }
+  // Ny statistik efter inklistringen: ett mål till
+  const nhl = { g: 2, a: 0, p: 2, pm: 1, ppg: 0, ppa: 0, shg: 0, sha: 0, gwg: 0, sog: 4, fw: 13, fl: 2, hit: 1, blk: 1 };
+  assert.equal(fantasyPoints(deltaStats(suzuki, nhl), false), 2.1);
+  // NHL-datan ligger efter (färre skott än Yahoo): inget extra räknas
+  assert.equal(fantasyPoints(deltaStats(suzuki, { ...nhl, g: 1, sog: 2 }), false), 0);
+});
