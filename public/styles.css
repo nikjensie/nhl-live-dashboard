@@ -783,3 +783,13 @@ body[data-view="matchup"] .datenav { visibility: hidden; }
 .mu-left { font-size: 11px; color: var(--muted); white-space: nowrap; flex: none; }
 @media (max-width: 1100px) { .mu-grid { grid-template-columns: 1fr 1fr; } .mu-board { grid-column: 1 / -1; position: static; } }
 @media (max-width: 700px) { .mu-grid { grid-template-columns: 1fr; } .mu-team header { flex-wrap: wrap; } }
+.mu-cats td small { font: 600 11px/1 var(--sans); color: var(--dim); margin: 0 6px; }
+.mu-cats th small { display: block; margin: 3px 0 0; font-weight: 600; font-size: 10px; }
+.mu-score b { opacity: .75; }
+.mu-score b.lead { opacity: 1; }
+.mu-r { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; flex: none; }
+.mu-fp { font: 800 17px/1 var(--num); }
+.mu-team.me .mu-fp { color: var(--me); }
+.mu-team.opp .mu-fp { color: var(--opp); }
+.mu-fp.neg { color: var(--sh) !important; }
+.mu-list li.bench .mu-fp { color: var(--muted) !important; }

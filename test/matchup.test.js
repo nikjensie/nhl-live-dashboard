@@ -92,3 +92,15 @@ test('gameStats: PPA, SHG, GWG, tekningar och hållen nolla', () => {
   assert.equal(s[3].sho, 1); assert.equal(s[3].w, 1);
   assert.equal(s[5].l, 1); assert.equal(s[5].sho, 0);
 });
+
+test('fantasyPoints: ligans poängsättning', async () => {
+  const { fantasyPoints, comparePoints } = await import('../public/roster.js');
+  // 1 mål i PP (2+1), 1 assist (1), +1 (1), 4 skott (0,4), 5 FW (0,5), 3 FL (−0,3), 2 HIT (0,2), 1 BLK (0,2) = 6
+  const sk = { g: 1, a: 1, p: 2, pm: 1, ppg: 1, ppa: 0, shg: 0, sha: 0, gwg: 0, sog: 4, fw: 5, fl: 3, hit: 2, blk: 1 };
+  assert.equal(fantasyPoints(sk, false), 6);
+  // Vinst (4) med nolla (5), 30 räddningar (3), 0 insläppta
+  assert.equal(fantasyPoints({ w: 1, l: 0, otl: 0, ga: 0, sv: 30, sho: 1 }, true), 12);
+  assert.equal(fantasyPoints({ w: 0, l: 1, otl: 0, ga: 4, sv: 20, sho: 0 }, true), -1);
+  const t = comparePoints({ G: 2, W: 4 }, { sk: { g: 3 }, gl: { w: 1 } }, { sk: { g: 1 }, gl: { w: 2 } });
+  assert.deepEqual(t.total, { me: 10, opp: 10 });
+});

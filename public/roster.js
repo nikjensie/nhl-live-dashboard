@@ -16,6 +16,35 @@ export const CATS = {
   GAA: { f: (s) => (s.toi ? (s.ga * 3600) / s.toi : null), low: true, goalie: true, ratio: 2 },
   'SV%': { f: (s) => (s.sa ? s.sv / s.sa : null), goalie: true, ratio: 3 },
 };
+// Poängsättning i ligan (H2H Points). Kategorier utan vikt ger 0 poäng.
+export const POINTS = {
+  G: 2, A: 1, P: 0, '+/-': 1, PPG: 1, PPA: 1, SHG: 3, SHA: 2, GWG: 1, SOG: 0.1, FW: 0.1, FL: -0.1, HIT: 0.1, BLK: 0.2,
+  W: 4, L: -1, GA: -0.5, SV: 0.1, SHO: 5,
+};
+const r1 = (x) => Math.round(x * 100) / 100;
+
+/** Fantasypoäng för en statistikrad (spelare eller lagtotal). */
+export function fantasyPoints(s, goalie, weights = POINTS) {
+  if (!s) return 0;
+  let t = 0;
+  for (const [cat, w] of Object.entries(weights)) {
+    if (!w || !CATS[cat] || !!CATS[cat].goalie !== !!goalie) continue;
+    t += (catValue(cat, s) || 0) * w;
+  }
+  return r1(t);
+}
+
+/** Poäng per kategori och totalt för båda lagen. */
+export function comparePoints(weights, me, opp) {
+  const rows = Object.entries(weights).filter(([cat, w]) => w && CATS[cat]).map(([cat, w]) => {
+    const g = CATS[cat].goalie;
+    const a = catValue(cat, g ? me.gl : me.sk) || 0, b = catValue(cat, g ? opp.gl : opp.sk) || 0;
+    return { cat, w, a, b, pa: r1(a * w), pb: r1(b * w) };
+  });
+  const total = { me: r1(rows.reduce((t, r) => t + r.pa, 0)), opp: r1(rows.reduce((t, r) => t + r.pb, 0)) };
+  return { rows, total };
+}
+
 export const DEFAULT_SK = ['G', 'A', '+/-', 'PPP', 'SOG', 'HIT', 'BLK'];
 export const DEFAULT_G = ['W', 'GAA', 'SV%', 'SHO'];
 

@@ -1,6 +1,6 @@
 // Matchup-vyn: inklistrade Yahoo-trupper (mitt lag + motståndaren) och veckans kategorier live
 // ur NHL:s statistik (/api/fstats per dag, måndag–söndag östkusttid).
-import { parseRoster, statIndex, sumLines, teamTotals, compare, catValue, fmtCat, CATS, DEFAULT_SK, DEFAULT_G } from './roster.js';
+import { parseRoster, statIndex, sumLines, teamTotals, comparePoints, fantasyPoints, catValue, fmtCat, CATS, POINTS, DEFAULT_SK, DEFAULT_G } from './roster.js';
 
 const KEY = { me: 'rs.roster.me', opp: 'rs.roster.opp' };
 const etToday = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(new Date());
@@ -139,13 +139,15 @@ export function initMatchup({ store, esc, onChange }) {
     }
     const rows = r.players.map((p) => {
       const left = m.remaining?.get(p.team);
+      const s = stats.get(p);
+      const fp = s ? fantasyPoints(s, p.goalie) : null;
       return `<li class="${p.active ? '' : 'bench'}">
         <span class="mu-slot">${esc(p.slot || '–')}</span>
         <div class="mu-p">
           <div class="mu-n">${esc(p.name)} <span class="mu-tm">${esc(p.team)} · ${esc(p.pos.join(','))}</span>${p.status ? ` <span class="mu-st">${esc(p.status)}</span>` : ''}</div>
           <div class="mu-l">${line(p, stats.get(p), list)}</div>
         </div>
-        ${left != null ? `<span class="mu-left" title="Matcher kvar denna vecka">${left} kvar</span>` : ''}
+        <div class="mu-r">${fp != null ? `<b class="mu-fp${fp < 0 ? ' neg' : ''}" title="Fantasypoäng denna vecka">${fp.toFixed(1)}</b>` : ''}${left != null ? `<span class="mu-left" title="Matcher kvar denna vecka">${left} kvar</span>` : ''}</div>
       </li>`;
     }).join('');
     const when = r.date ? `trupp ${r.date}` : `inklistrad ${new Date(r.pastedAt).toLocaleDateString('sv-SE')}`;
@@ -166,13 +168,16 @@ export function initMatchup({ store, esc, onChange }) {
     let board = '';
     if (has) {
       const me = teamTotals(m.rosters.me, stats), opp = teamTotals(m.rosters.opp, stats);
-      const { rows, score } = compare(list, me, opp);
+      const { rows, total } = comparePoints(POINTS, me, opp);
+      const lead = total.me > total.opp ? 'me' : total.opp > total.me ? 'opp' : '';
       board = `<section class="mu-board">
-        <div class="mu-score"><div><span>${esc(m.rosters.me.team || 'Mitt lag')}</span><b class="me">${score.w}</b></div>
-          <i>${score.t ? `${score.t} lika` : '–'}</i>
-          <div><b class="opp">${score.l}</b><span>${esc(m.rosters.opp.team || 'Motståndaren')}</span></div></div>
-        <table class="mu-cats"><tbody>${rows.map((x) => `<tr class="${x.res || ''}">
-          <td class="a">${fmtCat(x.a, x.ratio)}</td><th>${esc(x.cat)}${x.low ? '<small title="Lägre är bättre">↓</small>' : ''}</th><td class="b">${fmtCat(x.b, x.ratio)}</td></tr>`).join('')}</tbody></table>
+        <div class="mu-score"><div><span>${esc(m.rosters.me.team || 'Mitt lag')}</span><b class="me${lead === 'me' ? ' lead' : ''}">${total.me.toFixed(1)}</b></div>
+          <i>poäng</i>
+          <div><b class="opp${lead === 'opp' ? ' lead' : ''}">${total.opp.toFixed(1)}</b><span>${esc(m.rosters.opp.team || 'Motståndaren')}</span></div></div>
+        <table class="mu-cats"><tbody>${rows.map((x) => `<tr class="${x.pa === x.pb ? '' : (x.pa > x.pb ? 'w' : 'l')}">
+          <td class="a">${fmtCat(x.a, 0)}<small>${x.pa ? x.pa.toFixed(1) : ''}</small></td>
+          <th>${esc(x.cat)}<small>${x.w > 0 ? '+' : ''}${x.w}</small></th>
+          <td class="b"><small>${x.pb ? x.pb.toFixed(1) : ''}</small>${fmtCat(x.b, 0)}</td></tr>`).join('')}</tbody></table>
         <p class="mu-note">Bara spelare på aktiva platser räknas (inte BN/IR/NA), enligt den senast inklistrade truppen. Byter du laguppställning under veckan – klistra in igen.</p>
       </section>`;
     }
