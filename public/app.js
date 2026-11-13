@@ -10,8 +10,8 @@ const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '
 const params = new URLSearchParams(location.search);
 const DEMO = params.has('demo');
 // Yahoo-delen är dold tills Yahoo godkänt appen för Fantasy-API:et. Visa den med ?fantasy
-// Fantasy-kolumnen (Yahoo) visas alltid; ?nofantasy döljer den
-const FANTASY = !params.has('nofantasy');
+// Yahoo-kolumnen är dold: Yahoo nekar Fantasy-API:et (403) utanför USA/Kanada. Visa med ?fantasy.
+const FANTASY = params.has('fantasy');
 if (!FANTASY) document.body.classList.add('no-fantasy');
 
 const store = {
