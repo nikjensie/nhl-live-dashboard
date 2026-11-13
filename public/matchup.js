@@ -17,7 +17,15 @@ export function weekOf(today) {
 export function initMatchup({ store, esc, onChange }) {
   const root = document.querySelector('#matchupView');
   const m = {
-    rosters: { me: store.get(KEY.me, null), opp: store.get(KEY.opp, null) },
+    rosters: { me: store.get(KEY.me, null), opp: store.get(KEY.opp, null) }, // det som visas
+    local: { me: store.get(KEY.me, null), opp: store.get(KEY.opp, null) }, // utan liga (sparas i webbläsaren)
+    lg: store.get('rs.league', null), // { id, token, member }
+    data: null, // ligan från servern
+    viewing: null, // medlem vars matchup visas (annan än jag)
+    form: null, // 'create' | 'join' | 'login:<id>'
+    lmsg: '',
+    busy: false,
+    readonly: false,
     editing: { me: false, opp: false },
     days: new Map(), // date -> { at, data }
     remaining: null, // lag -> matcher kvar denna vecka
@@ -29,6 +37,17 @@ export function initMatchup({ store, esc, onChange }) {
   };
 
   const visible = () => document.body.dataset.view === 'matchup';
+
+  // Delad ligalänk: /?liga=<id>
+  let openOnStart = false;
+  const qp = new URLSearchParams(location.search).get('liga');
+  if (qp && /^[A-Za-z0-9_-]{8,20}$/.test(qp)) {
+    if (m.lg?.id !== qp) { m.lg = { id: qp }; store.set('rs.league', m.lg); }
+    const u = new URL(location.href);
+    u.searchParams.delete('liga');
+    history.replaceState(null, '', u.pathname + u.search + u.hash);
+    openOnStart = true;
+  }
   const cats = () => {
     const src = m.rosters.me?.skCats?.length ? m.rosters.me : m.rosters.opp;
     const sk = src?.skCats?.length ? src.skCats : DEFAULT_SK;
@@ -36,11 +55,173 @@ export function initMatchup({ store, esc, onChange }) {
     return [...sk, ...(gs?.length ? gs : DEFAULT_G)];
   };
 
-  function save(side, roster) {
-    m.rosters[side] = roster;
-    store.set(KEY[side], roster);
-    onChange(m.rosters);
+  // ---- Liga ----
+  const loggedIn = () => !!(m.lg?.token && m.lg?.member && m.data?.members?.some((x) => x.id === m.lg.member));
+  const memberOf = (id) => m.data?.members?.find((x) => x.id === id);
+  /** Mina lag: från ligan när jag är inloggad, annars de lokalt sparade. */
+  function myRosters() {
+    if (loggedIn()) {
+      const me = memberOf(m.lg.member);
+      return { me: m.data.rosters?.[me.id] || null, opp: (me.opp && m.data.rosters?.[me.opp]) || null };
+    }
+    return m.local;
   }
+  function deriveRosters() {
+    if (m.viewing && m.data && m.viewing !== m.lg?.member) {
+      const mem = memberOf(m.viewing);
+      m.rosters = { me: m.data.rosters?.[m.viewing] || null, opp: (mem?.opp && m.data.rosters?.[mem.opp]) || null };
+      m.readonly = true;
+    } else {
+      m.viewing = null;
+      m.rosters = { ...myRosters() };
+      m.readonly = false;
+    }
+  }
+
+  async function api(body) {
+    const r = await fetch('/api/league', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...(m.lg?.token ? { Authorization: `Bearer ${m.lg.token}` } : {}) },
+      body: JSON.stringify(body),
+    });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw Object.assign(new Error(j.error || `Fel ${r.status}`), { status: r.status });
+    return j;
+  }
+
+  async function loadLeague() {
+    if (!m.lg?.id) return;
+    try {
+      const r = await fetch(`/api/league?id=${encodeURIComponent(m.lg.id)}`);
+      if (r.status === 404) { m.lmsg = 'Ligan finns inte längre.'; m.lg = null; store.set('rs.league', null); }
+      else if (r.ok) m.data = await r.json();
+    } catch { /* behåll det vi har */ }
+    deriveRosters();
+    onChange(myRosters());
+    if (visible()) render();
+  }
+
+  function setLeague(lg) {
+    m.lg = lg;
+    store.set('rs.league', lg);
+  }
+
+  let syncTimer = null;
+  function syncSoon() {
+    clearTimeout(syncTimer);
+    syncTimer = setTimeout(async () => {
+      try {
+        const j = await api({ action: 'save', id: m.lg.id, me: m.rosters.me, opp: m.rosters.opp });
+        m.data = j.league;
+        m.lmsg = '';
+      } catch (e) {
+        m.lmsg = e.status === 401 ? 'Du är utloggad – logga in igen för att spara.' : `Kunde inte spara: ${e.message}`;
+        if (e.status === 401) setLeague({ id: m.lg.id });
+        if (visible()) render();
+      }
+    }, 400);
+  }
+
+  function save(side, roster) {
+    if (m.readonly) return;
+    m.rosters[side] = roster;
+    if (loggedIn()) {
+      // Uppdatera den lokala kopian av ligan direkt och spara på servern
+      const me = memberOf(m.lg.member);
+      m.data.rosters ||= {};
+      if (side === 'me') m.data.rosters[me.id] = roster;
+      else { me.opp ||= `t:local`; m.data.rosters[me.opp] = roster; }
+      syncSoon();
+    } else {
+      m.local[side] = roster;
+      store.set(KEY[side], roster);
+    }
+    onChange(myRosters());
+  }
+
+  function leagueBar() {
+    const link = m.lg?.id ? `${location.origin}/?liga=${m.lg.id}` : '';
+    const msg = m.lmsg ? `<p class="mu-msg">${esc(m.lmsg)}</p>` : '';
+    if (!m.lg?.id) {
+      if (m.form === 'create') {
+        return `<section class="mu-league"><form data-form="create" class="mu-form">
+          <b>Ny liga</b><input name="name" placeholder="Ligans namn" maxlength="60" required>
+          <button class="mu-btn" ${m.busy ? 'disabled' : ''}>Skapa</button><button type="button" class="mu-btn ghost" data-lform="">Avbryt</button></form>${msg}</section>`;
+      }
+      return `<section class="mu-league"><div class="mu-lrow"><span>Spela med ligan: skapa en liga och dela länken, så kan alla lägga in sina lag och se varandras matchups.</span>
+        <button class="mu-btn" data-lform="create">Skapa liga</button></div>${msg}</section>`;
+    }
+    const name = m.data?.name || 'Ligan';
+    const members = m.data?.members || [];
+    if (loggedIn()) {
+      const me = memberOf(m.lg.member);
+      const opts = members.map((x) => `<option value="${esc(x.id)}" ${(m.viewing || m.lg.member) === x.id ? 'selected' : ''}>${esc(x.team)}${x.id === m.lg.member ? ' (jag)' : ''}</option>`).join('');
+      return `<section class="mu-league"><div class="mu-lrow">
+        <div class="mu-lname"><b>${esc(name)}</b><span>Inloggad som ${esc(me.team)} · ${members.length} lag</span></div>
+        <label class="mu-view">Visa <select data-view-member>${opts}</select></label>
+        <button class="mu-btn" data-copy="${esc(link)}">Kopiera länk</button>
+        <button class="mu-btn ghost" data-logout>Logga ut</button></div>${msg}</section>`;
+    }
+    // Liga vald men inte inloggad
+    const local = m.local.me?.team || '';
+    let form = '';
+    if (m.form === 'join') {
+      form = `<form data-form="join" class="mu-form"><b>Nytt lag i ligan</b>
+        <input name="team" placeholder="Lagets namn (som i Yahoo)" value="${esc(local)}" maxlength="60" required>
+        <input name="manager" placeholder="Ditt namn" maxlength="40">
+        <input name="pin" type="password" inputmode="numeric" pattern="[0-9]{4,8}" placeholder="Välj PIN (4–8 siffror)" required autocomplete="new-password">
+        <button class="mu-btn" ${m.busy ? 'disabled' : ''}>Gå med</button><button type="button" class="mu-btn ghost" data-lform="">Avbryt</button></form>`;
+    } else if (m.form?.startsWith('login:')) {
+      const mem = memberOf(m.form.slice(6));
+      form = `<form data-form="login" data-member="${esc(mem?.id || '')}" class="mu-form"><b>Logga in som ${esc(mem?.team || '')}</b>
+        <input name="pin" type="password" inputmode="numeric" pattern="[0-9]{4,8}" placeholder="PIN" required autocomplete="current-password">
+        <button class="mu-btn" ${m.busy ? 'disabled' : ''}>Logga in</button><button type="button" class="mu-btn ghost" data-lform="">Avbryt</button></form>`;
+    }
+    const chips = members.map((x) => `<button class="mu-chip" data-lform="login:${esc(x.id)}" title="Logga in som ${esc(x.team)}">${esc(x.team)}${x.manager ? ` <small>${esc(x.manager)}</small>` : ''}</button>`).join('');
+    return `<section class="mu-league"><div class="mu-lrow">
+        <div class="mu-lname"><b>${esc(name)}</b><span>${members.length ? 'Välj ditt lag och logga in med din PIN – eller lägg till ditt lag.' : 'Inga lag än – lägg till ditt.'}</span></div>
+        <button class="mu-btn" data-lform="join">+ Mitt lag</button>
+        <button class="mu-btn ghost" data-copy="${esc(link)}">Kopiera länk</button>
+        <button class="mu-btn ghost" data-leave title="Lämna ligan på den här enheten">Lämna</button></div>
+      ${members.length ? `<div class="mu-chips">${chips}</div>` : ''}${form}${msg}</section>`;
+  }
+
+  async function submitForm(f) {
+    const v = Object.fromEntries(new FormData(f));
+    m.busy = true; m.lmsg = ''; render();
+    try {
+      if (f.dataset.form === 'create') {
+        const { id } = await api({ action: 'create', name: v.name });
+        setLeague({ id });
+        m.form = 'join';
+        m.lmsg = 'Ligan är skapad. Lägg till ditt lag och dela sedan länken med ligan.';
+        await loadLeague();
+      } else if (f.dataset.form === 'join' || f.dataset.form === 'login') {
+        const body = f.dataset.form === 'join'
+          ? { action: 'join', id: m.lg.id, team: v.team, manager: v.manager, pin: v.pin }
+          : { action: 'login', id: m.lg.id, member: f.dataset.member, pin: v.pin };
+        const j = await api(body);
+        setLeague({ id: m.lg.id, token: j.token, member: j.member });
+        m.data = j.league;
+        m.form = null;
+        // Första gången: ta med de lokalt inlagda lagen till ligan
+        const mine = j.league.rosters?.[j.member];
+        if (!mine && m.local.me) {
+          await api({ action: 'save', id: m.lg.id, me: m.local.me, opp: m.local.opp }).then((r) => { m.data = r.league; }).catch(() => {});
+        }
+        m.lmsg = f.dataset.form === 'join' ? 'Du är med i ligan. Dina lag sparas nu i ligan och syns på alla dina enheter.' : '';
+        deriveRosters();
+        onChange(myRosters());
+        load();
+      }
+    } catch (e) {
+      m.lmsg = e.message;
+    } finally {
+      m.busy = false;
+      render();
+    }
+  }
+
 
   function handlePaste(side, text) {
     const teams = parsePaste(text);
@@ -252,7 +433,7 @@ export function initMatchup({ store, esc, onChange }) {
 
   function teamCard(side, stats, list) {
     const r = m.rosters[side];
-    const label = side === 'me' ? 'Mitt lag' : 'Motståndaren';
+    const label = m.readonly ? (side === 'me' ? 'Lag' : 'Motståndare') : side === 'me' ? 'Mitt lag' : 'Motståndaren';
     const msg = m.msg[side] ? `<p class="mu-msg">${esc(m.msg[side])}</p>` : '';
     if (!r || m.editing[side]) {
       return `<section class="mu-team ${side}">
@@ -297,6 +478,7 @@ export function initMatchup({ store, esc, onChange }) {
   }
 
   function render() {
+    deriveRosters();
     const { start, end } = weekOf(etToday());
     const list = cats();
     const stats = statsFor();
@@ -329,8 +511,10 @@ export function initMatchup({ store, esc, onChange }) {
     }
     root.innerHTML = `
       <div class="wk-head"><h2>Matchup</h2></div>
+      ${leagueBar()}
+      ${m.readonly ? `<p class="mu-msg">Du tittar på ${esc(memberOf(m.viewing)?.team || '')}s matchup.</p>` : ''}
       <p class="wk-sub">Vecka ${dayFmt.format(new Date(`${start}T12:00:00Z`))} – ${dayFmt.format(new Date(`${end}T12:00:00Z`))} · statistik från NHL, uppdateras live${m.error ? ` · <span class="mu-err">${esc(m.error)}</span>` : ''}</p>
-      <div class="mu-grid">${board}${teamCard('me', stats, list)}${teamCard('opp', stats, list)}</div>`;
+      <div class="mu-grid${m.readonly ? ' mu-ro' : ''}">${board}${teamCard('me', stats, list)}${teamCard('opp', stats, list)}</div>`;
   }
 
   // ---- Händelser ----
@@ -353,7 +537,35 @@ export function initMatchup({ store, esc, onChange }) {
     const ta = e.target.closest('[data-paste]');
     if (ta && ta.value.length > 40) handlePaste(ta.dataset.paste, ta.value);
   });
+ root.addEventListener('submit', (e) => {
+    const f = e.target.closest('[data-form]');
+    if (!f) return;
+    e.preventDefault();
+    submitForm(f);
+  });
+  root.addEventListener('change', (e) => {
+    const sel = e.target.closest('[data-view-member]');
+    if (!sel) return;
+    m.viewing = sel.value === m.lg?.member ? null : sel.value;
+    render();
+  });
   root.addEventListener('click', (e) => {
+    const lf = e.target.closest('[data-lform]');
+    if (lf) { m.form = lf.dataset.lform || null; m.lmsg = ''; render(); root.querySelector('.mu-form input')?.focus(); return; }
+    const cp = e.target.closest('[data-copy]');
+    if (cp) {
+      const url = cp.dataset.copy;
+      (navigator.share && matchMedia('(pointer: coarse)').matches
+        ? navigator.share({ title: m.data?.name || 'Liga', url }).catch(() => {})
+        : navigator.clipboard?.writeText(url).then(() => { m.lmsg = 'Länken är kopierad – dela den med ligan.'; render(); }, () => { m.lmsg = url; render(); }));
+      return;
+    }
+    if (e.target.closest('[data-logout]')) {
+      setLeague({ id: m.lg.id }); m.viewing = null; m.lmsg = 'Utloggad.'; render(); onChange(myRosters()); return;
+    }
+    if (e.target.closest('[data-leave]')) {
+      setLeague(null); m.data = null; m.viewing = null; m.form = null; m.lmsg = ''; render(); onChange(myRosters()); return;
+    }
     const arg = (attr) => { const el = e.target.closest(`[${attr}]`); return el ? el.getAttribute(attr).split(':') : null; };
     let a;
     if ((a = arg('data-pick'))) {
@@ -371,7 +583,7 @@ export function initMatchup({ store, esc, onChange }) {
     const cl = e.target.closest('[data-clear]');
     if (cl) {
       const side = cl.dataset.clear;
-      save(side, null); store.set(KEY[side], null);
+      save(side, null);
       m.msg[side] = 'Laget är rensat – klistra in ett nytt.';
       render();
       root.querySelector(`[data-paste="${side}"]`)?.focus();
@@ -382,8 +594,10 @@ export function initMatchup({ store, esc, onChange }) {
   });
 
   return {
-    rosters: () => m.rosters,
-    show() { render(); load(); },
+    rosters: () => myRosters(),
+    openOnStart,
+    init() { if (m.lg?.id) loadLeague(); },
+    show() { render(); load(); loadLeague(); },
     hide() { clearTimeout(m.timer); },
   };
 }

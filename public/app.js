@@ -1252,7 +1252,9 @@ matchup = initMatchup({
   onChange() { rebuildMarks(); if (state.scores) renderAll(); },
 });
 rebuildMarks();
-try { const v = sessionStorage.getItem('rs.view'); if (v === 'week' || v === 'matchup') setView(v); } catch {}
+matchup.init();
+if (matchup.openOnStart) setView('matchup');
+else try { const v = sessionStorage.getItem('rs.view'); if (v === 'week' || v === 'matchup') setView(v); } catch {}
 $('#games').innerHTML = `<div class="empty">Laddar…</div>`;
 fetchScores();
 if (FANTASY || DEMO) fetchFantasy();

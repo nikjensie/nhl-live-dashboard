@@ -824,3 +824,22 @@ body[data-view="matchup"] .datenav { visibility: hidden; }
   .game.live .g-period .clock { font-size: 21px; }
   .game.live .g-period { gap: 4px; }
 }
+/* Liga (inloggning med PIN) */
+.mu-league { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 10px 14px; margin: 0 0 14px; }
+.mu-lrow { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 13px; color: var(--muted); }
+.mu-lrow > span { flex: 1; min-width: 200px; }
+.mu-lname { flex: 1; min-width: 180px; display: flex; flex-direction: column; gap: 2px; }
+.mu-lname b { color: var(--text); font-size: 14px; }
+.mu-lname span { font-size: 12px; }
+.mu-view { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; }
+.mu-view select, .mu-form input { font: 14px var(--sans); color: var(--text); background: var(--bg-2); border: 1px solid var(--line-strong); border-radius: 8px; padding: 6px 8px; }
+.mu-form { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line); font-size: 13px; }
+.mu-form b { flex-basis: 100%; }
+.mu-form input { flex: 1; min-width: 140px; }
+.mu-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.mu-chip { font-size: 12.5px; font-weight: 600; padding: 6px 10px; border-radius: 999px; background: var(--card-2); border: 1px solid var(--line); color: var(--text); }
+.mu-chip small { color: var(--dim); font-weight: 500; }
+.mu-chip:hover { border-color: var(--line-hover); }
+.mu-league .mu-msg { margin: 10px 0 0; }
+.mu-ro .mu-x, .mu-ro [data-pick], .mu-ro [data-edit], .mu-ro [data-clear], .mu-ro .mu-paste, .mu-ro .mu-hint, .mu-ro .mu-picker { display: none !important; }
+@media (max-width: 900px) { .mu-view select, .mu-form input { font-size: 16px; } }
