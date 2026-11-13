@@ -17,7 +17,7 @@
 
 Testa utseendet utan pågående matcher: öppna `/?demo`.
 
-> **Yahoo-delen är dold.** Yahoo kräver sedan juli 2026 att appar godkänns för Fantasy-API:et och godkänner bara utvecklare i USA och Kanada, så inloggningen fungerar inte härifrån. Använd Matchup-vyn (inklistrade trupper) i stället. Den gamla delen kan visas med `/?fantasy`.
+> **Yahoo-inloggning:** Fantasy-kolumnen visas alltid (dölj med `/?nofantasy`). Yahoo godkänner sedan juli 2026 bara nya API-appar i USA och Kanada; en app skapad tidigare kan fortfarande fungera. Utan Yahoo går det att använda Matchup-vyn (inklistrade trupper). När du är inloggad går Yahoos trupper före de inklistrade för markeringarna.
 
 ## Kom igång lokalt
 

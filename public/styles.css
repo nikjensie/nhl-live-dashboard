@@ -818,3 +818,9 @@ body[data-view="matchup"] .datenav { visibility: hidden; }
 .mu-grid > * { min-width: 0; }
 @media (max-width: 700px) { .mu-grid { grid-template-columns: minmax(0, 1fr); } .mu-base { font-size: 10.5px; } .mu-cats th, .mu-cats td { padding: 6px 4px; } }
 @media (max-width: 700px) { .mu-team header .mu-tt { flex-basis: 100%; } .mu-team header .mu-btn { flex: 1; } }
+/* Smala kort (tre kolumner på desktop): klocka, skjutknapp, radio och NHL-länk ska rymmas */
+@container (max-width: 330px) {
+  .game.live .g-top { gap: 4px; padding-left: 10px; padding-right: 8px; }
+  .game.live .g-period .clock { font-size: 21px; }
+  .game.live .g-period { gap: 4px; }
+}

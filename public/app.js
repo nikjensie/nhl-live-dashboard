@@ -10,7 +10,8 @@ const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '
 const params = new URLSearchParams(location.search);
 const DEMO = params.has('demo');
 // Yahoo-delen är dold tills Yahoo godkänt appen för Fantasy-API:et. Visa den med ?fantasy
-const FANTASY = params.has('fantasy');
+// Fantasy-kolumnen (Yahoo) visas alltid; ?nofantasy döljer den
+const FANTASY = !params.has('nofantasy');
 if (!FANTASY) document.body.classList.add('no-fantasy');
 
 const store = {
@@ -181,8 +182,9 @@ function manualFantasy(r) {
   return { loggedIn: true, leagues: [{ key: 'manual', name: 'Matchup', me: side(r.me), opp: side(r.opp) }] };
 }
 function rebuildMarks() {
-  const manual = manualFantasy(matchup?.rosters());
-  state.marks = buildIndex(manual || (state.fantasy?.loggedIn ? state.fantasy : null));
+  // Yahoo (inloggad, med trupper) går före inklistrade trupper
+  const yahoo = state.fantasy?.loggedIn && state.fantasy.leagues?.some((l) => l.me?.players?.length) ? state.fantasy : null;
+  state.marks = buildIndex(yahoo || manualFantasy(matchup?.rosters()));
 }
 
 async function fetchFantasy() {
