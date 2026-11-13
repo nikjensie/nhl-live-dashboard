@@ -131,31 +131,67 @@ export function parseRoster(text) {
   return parsePaste(text)[0] || { team: '', date: '', players: [], skCats: [], gCats: [] };
 }
 
-/**
- * Yahoos egna siffror som bas: lagets poäng vid inklistringen plus det som hänt sedan dess
- * (NHL-statistik för veckan minus Yahoos statistik per spelare) för spelare på aktiva platser.
- * Utan Yahoo-siffror (lagsidan) räknas allt från NHL-statistiken.
- */
-export function deltaStats(p, s) {
-  if (!s) return null;
-  if (!p.stats) return s;
-  const d = { ...s };
-  let short = false;
-  for (const [cat, v] of Object.entries(p.stats)) {
+const STAT_KEYS = ['g', 'a', 'p', 'pm', 'pim', 'ppg', 'ppa', 'shg', 'sha', 'gwg', 'sog', 'fw', 'fl', 'hit', 'blk',
+  'gp', 'gs', 'w', 'l', 'otl', 'ga', 'sv', 'sa', 'sho', 'toi'];
+
+/** Ögonblicksbild av en statistikrad (bara siffrorna) – sparas när en spelare plockas eller släpps. */
+export function snapshot(s) {
+  const o = {};
+  for (const k of STAT_KEYS) if (typeof s?.[k] === 'number') o[k] = s[k];
+  return o;
+}
+
+/** Yahoos kategorier (G, A, +/- …) som NHL-fält (g, a, pm …). L = förluster inkl. förlängning. */
+export function yahooKeyed(stats) {
+  const o = {};
+  for (const [cat, v] of Object.entries(stats || {})) {
+    if (cat === 'L') { o.l = v; o.otl = 0; o.lAll = true; continue; }
     const c = CATS[cat];
-    if (!c?.k && cat !== 'L') continue;
-    const have = cat === 'L' ? (s.l || 0) + (s.otl || 0) : s[c.k] || 0;
+    if (c?.k) o[c.k] = v;
+  }
+  return o;
+}
+
+/**
+ * Statistik i cur minus en startpunkt (Yahoos siffror vid inklistringen eller en ögonblicksbild).
+ * Räknestatistik kan inte minska: ligger NHL-datan efter (dag saknas, rättelse) räknas inget
+ * extra för spelaren, så att Yahoos siffra står kvar i stället för att dras ned.
+ */
+export function diffStats(cur, start) {
+  const d = { ...cur };
+  let short = false;
+  for (const [k, v] of Object.entries(start)) {
+    if (k === 'lAll' || k === 'otl' && start.lAll) continue;
+    const have = k === 'l' && start.lAll ? (cur.l || 0) + (cur.otl || 0) : cur[k] || 0;
     const diff = have - v;
-    if (cat !== '+/-' && diff < 0) short = true; // NHL-datan ligger efter Yahoo (dag saknas, rättelse)
-    if (cat === 'L') { d.l = diff; d.otl = 0; } else d[c.k] = diff;
+    if (k !== 'pm' && diff < 0) short = true;
+    d[k] = diff;
+    if (k === 'l' && start.lAll) d.otl = 0;
   }
-  // Räknestatistik kan inte minska. Saknas något i NHL-datan räknas inget extra för spelaren,
-  // så att Yahoos siffra står kvar i stället för att dras ned av ofullständig data.
-  if (short) {
-    for (const k of Object.keys(d)) if (typeof d[k] === 'number' && !['id', 'gameId'].includes(k)) d[k] = 0;
-  }
+  if (short) for (const k of STAT_KEYS) if (typeof d[k] === 'number') d[k] = 0;
   return d;
 }
+
+/**
+ * Statistik som räknas för spelaren:
+ * - från: Yahoos siffror vid inklistringen (useBase) eller ögonblicksbilden när spelaren plockades
+ * - till: nu, eller ögonblicksbilden när spelaren släpptes
+ */
+export function countedStats(p, s, useBase) {
+  const cur = p.to || s;
+  if (!cur) return null;
+  const start = p.from || (useBase && p.stats ? yahooKeyed(p.stats) : null);
+  return start ? diffStats(cur, start) : cur;
+}
+
+/** Bakåtkompatibel: NHL-statistik minus Yahoos statistik vid inklistringen. */
+export function deltaStats(p, s) {
+  if (!s) return null;
+  return p.stats ? diffStats(s, yahooKeyed(p.stats)) : s;
+}
+
+/** Räknas spelaren i lagets total? Aktiv plats, eller släppt av dig efter att ha stått på aktiv plats. */
+export const counts = (p) => p.active || (p.to && p.wasActive);
 
 const norm = (s) => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z]/g, '');
 
@@ -212,7 +248,7 @@ export function teamTotals(roster, stats) {
   const sk = { ...ZERO_SK }, gl = { ...ZERO_G };
   for (const p of roster.players) {
     const s = stats.get(p);
-    if (!s || !p.active) continue;
+    if (!s || !counts(p)) continue;
     const into = p.goalie ? gl : sk;
     for (const k of Object.keys(into)) into[k] += s[k] || 0;
   }

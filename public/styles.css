@@ -799,3 +799,22 @@ body[data-view="matchup"] .datenav { visibility: hidden; }
 .mu-base b { color: var(--text); }
 .mu-sub { margin: 4px 0 2px; font-size: 10.5px; text-transform: uppercase; letter-spacing: .08em; color: var(--dim); text-align: center; font-weight: 700; }
 .mu-msg.warn { color: var(--goal); background: var(--goal-bg); }
+/* Spelarväljare och plock/släpp */
+.mu-picker { background: var(--bg-2); border: 1px solid var(--line); border-radius: 10px; padding: 8px; margin: 0 0 8px; }
+.mu-search { display: flex; gap: 6px; }
+.mu-search input { flex: 1; min-width: 0; font: 14px var(--sans); color: var(--text); background: var(--card); border: 1px solid var(--line-strong); border-radius: 8px; padding: 8px 10px; }
+.mu-search input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+.mu-results { list-style: none; margin: 6px 0 0; padding: 0; max-height: 300px; overflow-y: auto; }
+.mu-results li { display: flex; align-items: center; gap: 6px; padding: 6px 2px; border-top: 1px solid var(--line); }
+.mu-results li:first-child { border-top: 0; }
+.mu-results .mu-none { font-size: 12px; padding: 4px 2px; }
+.mu-x { flex: none; width: 28px; height: 28px; border-radius: 8px; border: 1px solid transparent; background: transparent; color: var(--dim); font-size: 16px; line-height: 1; cursor: pointer; }
+.mu-x:hover { border-color: var(--line); color: var(--text); background: var(--card-2); }
+.mu-tag { font-size: 9.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); background: var(--card-2); border-radius: 4px; padding: 1px 5px; vertical-align: 1px; }
+.mu-tag.add { color: var(--ev); background: var(--ev-bg); }
+.mu-list li.dropped .mu-n { text-decoration: none; }
+/* iOS zoomar in på fält med mindre text än 16 px */
+@media (max-width: 900px) { .mu-search input, .mu-paste { font-size: 16px; } }
+.mu-grid > * { min-width: 0; }
+@media (max-width: 700px) { .mu-grid { grid-template-columns: minmax(0, 1fr); } .mu-base { font-size: 10.5px; } .mu-cats th, .mu-cats td { padding: 6px 4px; } }
+@media (max-width: 700px) { .mu-team header .mu-tt { flex-basis: 100%; } .mu-team header .mu-btn { flex: 1; } }

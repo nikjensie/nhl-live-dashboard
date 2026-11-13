@@ -130,3 +130,27 @@ test('parsePaste: matchup-sidan ger båda lagen med Yahoos poäng och statistik'
   // NHL-datan ligger efter (färre skott än Yahoo): inget extra räknas
   assert.equal(fantasyPoints(deltaStats(suzuki, { ...nhl, g: 1, sog: 2 }), false), 0);
 });
+
+test('plock och släpp: bara statistiken medan spelaren är i laget räknas', async () => {
+  const { countedStats, snapshot, fantasyPoints, counts, teamTotals } = await import('../public/roster.js');
+  const before = { g: 1, a: 0, p: 1, pm: 0, sog: 3, fw: 0, fl: 0, hit: 0, blk: 0, gp: 1 };
+  const after = { ...before, g: 2, p: 2, sog: 5, gp: 2 };
+  // Plockad efter första matchen: bara andra matchen räknas (mål 2 p + 2 skott 0,2)
+  const added = { active: true, from: snapshot(before) };
+  assert.equal(fantasyPoints(countedStats(added, after, false), false), 2.2);
+  // Släppt efter första matchen: andra matchen räknas inte
+  const dropped = { active: false, wasActive: true, to: snapshot(before) };
+  assert.equal(fantasyPoints(countedStats(dropped, after, false), false), 2.3);
+  assert.ok(counts(dropped));
+  assert.ok(!counts({ active: false, wasActive: false, to: {} }));
+  // Släppt från bänken räknas inte i lagets total
+  const roster = { players: [dropped, { active: false, wasActive: false, to: snapshot(before) }] };
+  const st = new Map(roster.players.map((p) => [p, countedStats(p, after, false)]));
+  assert.equal(teamTotals(roster, st).sk.g, 1);
+});
+
+test('rosterPlayers: NHL-trupp till spelarlista', async () => {
+  const { rosterPlayers } = await import('../api/players.js');
+  const list = rosterPlayers('BOS', { forwards: [{ id: 1, firstName: { default: 'David' }, lastName: { default: 'Pastrnak' }, positionCode: 'R' }], defensemen: [], goalies: [{ id: 2, firstName: { default: 'Jeremy' }, lastName: { default: 'Swayman' }, positionCode: 'G' }] });
+  assert.deepEqual(list, [{ id: 1, name: 'David Pastrnak', team: 'BOS', pos: 'RW' }, { id: 2, name: 'Jeremy Swayman', team: 'BOS', pos: 'G' }]);
+});

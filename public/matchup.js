@@ -1,6 +1,6 @@
 // Matchup-vyn: inklistrade Yahoo-trupper (mitt lag + motståndaren) och veckans kategorier live
 // ur NHL:s statistik (/api/fstats per dag, måndag–söndag östkusttid).
-import { parsePaste, deltaStats, statIndex, sumLines, teamTotals, comparePoints, fantasyPoints, catValue, fmtCat, CATS, POINTS, DEFAULT_SK, DEFAULT_G } from './roster.js';
+import { parsePaste, countedStats, counts, snapshot, statIndex, sumLines, teamTotals, comparePoints, fantasyPoints, catValue, fmtCat, CATS, POINTS, DEFAULT_SK, DEFAULT_G } from './roster.js';
 
 const KEY = { me: 'rs.roster.me', opp: 'rs.roster.opp' };
 const etToday = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(new Date());
@@ -23,6 +23,9 @@ export function initMatchup({ store, esc, onChange }) {
     remaining: null, // lag -> matcher kvar denna vecka
     timer: null,
     msg: { me: '', opp: '' },
+    picking: { me: false, opp: false }, // spelarväljaren öppen
+    query: { me: '', opp: '' },
+    pool: null, // alla NHL-spelare (/api/players)
   };
 
   const visible = () => document.body.dataset.view === 'matchup';
@@ -70,11 +73,12 @@ export function initMatchup({ store, esc, onChange }) {
   // Yahoos siffror gäller bara veckan de klistrades in
   const hasBase = (r) => r && r.total != null && r.week === weekOf(etToday()).start;
   /** Statistik som ska räknas för spelaren: allt (utan Yahoo-bas) eller bara det som hänt efter inklistringen. */
-  const counted = (r, p, s) => (hasBase(r) ? (p.stats ? deltaStats(p, s) : s) : s);
+  const counted = (r, p, s) => countedStats(p, s, hasBase(r));
   /** Spelarens poäng för veckan. */
   function playerFp(r, p, s) {
-    if (hasBase(r) && p.fp != null) return Math.round((p.fp + (s ? fantasyPoints(counted(r, p, s), p.goalie) : 0)) * 100) / 100;
-    return s ? fantasyPoints(s, p.goalie) : null;
+    const c = counted(r, p, s);
+    if (hasBase(r) && p.fp != null) return Math.round((p.fp + (c ? fantasyPoints(c, p.goalie) : 0)) * 100) / 100;
+    return c ? fantasyPoints(c, p.goalie) : null;
   }
 
   // ---- Data ----
@@ -128,7 +132,7 @@ export function initMatchup({ store, esc, onChange }) {
     const map = new Map();
     for (const side of ['me', 'opp']) {
       for (const p of m.rosters[side]?.players || []) {
-        const id = idx.find(p.team, p.name);
+        const id = p.id && byId.has(p.id) ? p.id : idx.find(p.team, p.name);
         if (id) map.set(p, byId.get(id));
       }
     }
@@ -149,6 +153,103 @@ export function initMatchup({ store, esc, onChange }) {
     return `${s.live ? '<span class="dot" title="Spelar nu"></span>' : ''}<span class="mu-gp">${gp}</span>${parts.length ? ' · ' + parts.join(' · ') : ''}`;
   }
 
+  const hhmm = (iso) => {
+    const d = new Date(iso);
+    return `${d.toLocaleDateString('sv-SE', { weekday: 'short' })} ${d.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' })}`;
+  };
+
+  // ---- Spelarväljare ----
+  function picker(side) {
+    if (!m.picking[side]) return '';
+    return `<div class="mu-picker">
+      <div class="mu-search"><input type="search" data-q="${side}" value="${esc(m.query[side])}" placeholder="Sök spelare eller lag (t.ex. Pastrnak, BOS)" autocomplete="off" enterkeyhint="search">
+        <button class="mu-btn ghost" data-pickclose="${side}">Stäng</button></div>
+      <ul class="mu-results" data-results="${side}">${results(side)}</ul>
+    </div>`;
+  }
+
+  const norm = (x) => String(x || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  function results(side) {
+    if (!m.pool) return '<li class="mu-none">Hämtar spelare…</li>';
+    const q = norm(m.query[side]).trim();
+    if (q.length < 2) return '<li class="mu-none">Skriv minst två bokstäver.</li>';
+    const taken = new Set(['me', 'opp'].flatMap((x) => (m.rosters[x]?.players || []).filter((p) => !p.to && p.slot !== '--').map((p) => `${p.team}|${norm(p.name)}`)));
+    const words = q.split(/\s+/);
+    const hits = m.pool.filter((p) => { const h = norm(`${p.name} ${p.team}`); return words.every((w) => h.includes(w)); }).slice(0, 12);
+    if (!hits.length) return '<li class="mu-none">Ingen träff.</li>';
+    return hits.map((p) => {
+      const has = taken.has(`${p.team}|${norm(p.name)}`);
+      return `<li><div class="mu-p"><div class="mu-n">${esc(p.name)} <span class="mu-tm">${esc(p.team)} · ${esc(p.pos)}</span></div></div>
+        ${has ? '<span class="mu-none">I ett lag</span>' : `<button class="mu-btn" data-add="${side}:${p.id}:1">Aktiv</button><button class="mu-btn ghost" data-add="${side}:${p.id}:0">Bänk</button>`}</li>`;
+    }).join('');
+  }
+
+  async function loadPool() {
+    if (m.pool) return;
+    try {
+      const r = await fetch('/api/players');
+      if (!r.ok) throw new Error(r.status);
+      m.pool = (await r.json()).players;
+    } catch { m.pool = null; m.error = 'Kunde inte hämta spelarlistan.'; }
+    for (const side of ['me', 'opp']) {
+      const el = root.querySelector(`[data-results="${side}"]`);
+      if (el) el.innerHTML = results(side);
+    }
+  }
+
+  /** Ögonblicksbild av spelarens veckostatistik just nu (eller nollor om han inte spelat). */
+  function nowStats(p) {
+    const s = statsFor().get(p);
+    return snapshot(s || {});
+  }
+
+  function addPlayer(side, id, active) {
+    const src = m.pool?.find((p) => p.id === id);
+    if (!src) return;
+    let r = m.rosters[side];
+    if (!r) r = { team: '', players: [], skCats: [], gCats: [], pastedAt: new Date().toISOString(), week: weekOf(etToday()).start };
+    const goalie = src.pos === 'G';
+    const p = { id: src.id, name: src.name, team: src.team, pos: [src.pos], goalie, status: '',
+      slot: active ? (goalie ? 'G' : src.pos) : 'BN', active: !!active, addedAt: new Date().toISOString() };
+    // Bara det som händer efter att spelaren plockats räknas
+    p.from = nowStats(p);
+    r = { ...r, players: [...r.players, p] };
+    save(side, r);
+    m.msg[side] = `${src.name} tillagd${active ? '' : ' på bänken'}.`;
+    render();
+    root.querySelector(`[data-q="${side}"]`)?.focus();
+  }
+
+  function dropPlayer(side, i) {
+    const r = m.rosters[side];
+    const p = r?.players[i];
+    if (!p) return;
+    const to = nowStats(p);
+    const np = { ...p, to, wasActive: p.active, prevSlot: p.slot, slot: '--', active: false, droppedAt: new Date().toISOString() };
+    save(side, { ...r, players: r.players.map((x, k) => (k === i ? np : x)) });
+    m.msg[side] = `${p.name} släppt – poängen hittills står kvar.`;
+    render();
+  }
+
+  function undropPlayer(side, i) {
+    const r = m.rosters[side];
+    const p = r?.players[i];
+    if (!p?.to) return;
+    const { to, wasActive, prevSlot, droppedAt, ...rest } = p;
+    save(side, { ...r, players: r.players.map((x, k) => (k === i ? { ...rest, slot: prevSlot, active: !!wasActive } : x)) });
+    m.msg[side] = `${p.name} är tillbaka i laget.`;
+    render();
+  }
+
+  function deletePlayer(side, i) {
+    const r = m.rosters[side];
+    const p = r?.players[i];
+    if (!p) return;
+    save(side, { ...r, players: r.players.filter((_, k) => k !== i) });
+    m.msg[side] = `${p.name} borttagen.`;
+    render();
+  }
+
   function teamCard(side, stats, list) {
     const r = m.rosters[side];
     const label = side === 'me' ? 'Mitt lag' : 'Motståndaren';
@@ -158,20 +259,27 @@ export function initMatchup({ store, esc, onChange }) {
         <header><span class="mu-dot"></span><h3>${label}</h3>${r ? `<button class="mu-btn ghost" data-cancel="${side}">Avbryt</button>` : ''}</header>
         ${msg}
         <textarea class="mu-paste" data-paste="${side}" rows="6" placeholder="Klistra in matchup-sidan från Yahoo (fyller i båda lagen) – eller ${side === 'me' ? 'din' : 'motståndarens'} lagsida."></textarea>
-        <p class="mu-hint">Inläsningen sker direkt när du klistrar in.</p>
+        <p class="mu-hint">Inläsningen sker direkt när du klistrar in. ${r ? '' : `Eller <button class="textbtn" data-pick="${side}">välj spelare själv</button>.`}</p>
+        ${r ? '' : picker(side)}
       </section>`;
     }
     const rows = r.players.map((p) => {
       const left = m.remaining?.get(p.team);
       const s = stats.get(p);
       const fp = playerFp(r, p, s);
-      return `<li class="${p.active ? '' : 'bench'}">
+      const i = r.players.indexOf(p);
+      const tag = p.to ? `<span class="mu-tag">Släppt ${esc(hhmm(p.droppedAt))}</span>` : p.from ? `<span class="mu-tag add">Plockad ${esc(hhmm(p.addedAt))}</span>` : '';
+      const act = p.to
+        ? `<button class="mu-x" data-undrop="${side}:${i}" title="Ångra släppet">↺</button><button class="mu-x" data-del="${side}:${i}" title="Ta bort helt (t.ex. om spelaren lades till av misstag)">🗑</button>`
+        : p.slot === '--' ? '' : `<button class="mu-x" data-drop="${side}:${i}" title="Släpp spelaren – poängen hittills står kvar">×</button>`;
+      return `<li class="${p.active ? '' : 'bench'}${p.to || p.slot === '--' ? ' dropped' : ''}">
         <span class="mu-slot">${esc(p.slot || '–')}</span>
         <div class="mu-p">
-          <div class="mu-n">${esc(p.name)} <span class="mu-tm">${esc(p.team)} · ${esc(p.pos.join(','))}</span>${p.status ? ` <span class="mu-st">${esc(p.status)}</span>` : ''}</div>
-          <div class="mu-l">${p.slot === '--' ? '<span class="mu-none">Släppt – poängen räknas för tiden i laget</span>' : line(p, s, list)}</div>
+          <div class="mu-n">${esc(p.name)} <span class="mu-tm">${esc(p.team)} · ${esc(p.pos.join(','))}</span>${p.status ? ` <span class="mu-st">${esc(p.status)}</span>` : ''} ${tag}</div>
+          <div class="mu-l">${p.slot === '--' && !p.to ? '<span class="mu-none">Släppt – poängen räknas för tiden i laget</span>' : line(p, s, list)}</div>
         </div>
-        <div class="mu-r">${fp != null ? `<b class="mu-fp${fp < 0 ? ' neg' : ''}" title="Fantasypoäng denna vecka">${fp.toFixed(1)}</b>` : ''}${left != null ? `<span class="mu-left" title="Matcher kvar denna vecka">${left} kvar</span>` : ''}</div>
+        <div class="mu-r">${fp != null ? `<b class="mu-fp${fp < 0 ? ' neg' : ''}" title="Fantasypoäng denna vecka">${fp.toFixed(1)}</b>` : ''}${left != null && !p.to && p.slot !== '--' ? `<span class="mu-left" title="Matcher kvar denna vecka">${left} kvar</span>` : ''}</div>
+        ${act}
       </li>`;
     }).join('');
     const pasted = new Date(r.pastedAt);
@@ -180,9 +288,10 @@ export function initMatchup({ store, esc, onChange }) {
       ? '<p class="mu-msg warn">Truppen är från en tidigare vecka – klistra in veckans matchup.</p>' : '';
     return `<section class="mu-team ${side}">
       <header><span class="mu-dot"></span><div class="mu-tt"><h3>${esc(r.team || label)}</h3><span>${label} · ${when}</span></div>
+        <button class="mu-btn" data-pick="${side}">+ Spelare</button>
         <button class="mu-btn" data-edit="${side}">Klistra in nytt</button>
         <button class="mu-btn ghost" data-clear="${side}">Rensa</button></header>
-      ${stale}${msg}
+      ${stale}${msg}${picker(side)}
       <ul class="mu-list">${rows}</ul>
     </section>`;
   }
@@ -194,7 +303,7 @@ export function initMatchup({ store, esc, onChange }) {
     const has = m.rosters.me && m.rosters.opp;
     let board = '';
     if (has) {
-      const eff = (r) => new Map([...stats].filter(([p]) => r.players.includes(p)).map(([p, s]) => [p, counted(r, p, s)]));
+      const eff = (r) => new Map(r.players.map((p) => [p, counted(r, p, stats.get(p))]).filter(([, c]) => c));
       const rm = m.rosters.me, ro = m.rosters.opp;
       const me = teamTotals(rm, eff(rm)), opp = teamTotals(ro, eff(ro));
       const { rows, total: live } = comparePoints(POINTS, me, opp);
@@ -233,11 +342,30 @@ export function initMatchup({ store, esc, onChange }) {
     handlePaste(ta.dataset.paste, text);
   });
   root.addEventListener('input', (e) => {
+    const q = e.target.closest('[data-q]');
+    if (q) {
+      m.query[q.dataset.q] = q.value;
+      const el = root.querySelector(`[data-results="${q.dataset.q}"]`);
+      if (el) el.innerHTML = results(q.dataset.q);
+      return;
+    }
     // Inklistring via mobilens meny eller dra-och-släpp ger inte alltid ett paste-event
     const ta = e.target.closest('[data-paste]');
     if (ta && ta.value.length > 40) handlePaste(ta.dataset.paste, ta.value);
   });
   root.addEventListener('click', (e) => {
+    const arg = (attr) => { const el = e.target.closest(`[${attr}]`); return el ? el.getAttribute(attr).split(':') : null; };
+    let a;
+    if ((a = arg('data-pick'))) {
+      m.picking[a[0]] = true; render(); loadPool();
+      root.querySelector(`[data-q="${a[0]}"]`)?.focus();
+      return;
+    }
+    if ((a = arg('data-pickclose'))) { m.picking[a[0]] = false; m.query[a[0]] = ''; render(); return; }
+    if ((a = arg('data-add'))) { addPlayer(a[0], Number(a[1]), a[2] === '1'); return; }
+    if ((a = arg('data-drop'))) { dropPlayer(a[0], Number(a[1])); return; }
+    if ((a = arg('data-undrop'))) { undropPlayer(a[0], Number(a[1])); return; }
+    if ((a = arg('data-del'))) { deletePlayer(a[0], Number(a[1])); return; }
     const ed = e.target.closest('[data-edit]');
     if (ed) { m.editing[ed.dataset.edit] = true; m.msg[ed.dataset.edit] = ''; render(); root.querySelector(`[data-paste="${ed.dataset.edit}"]`)?.focus(); return; }
     const cl = e.target.closest('[data-clear]');
