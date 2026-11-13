@@ -1,10 +1,12 @@
 import { nhlFetch, stateOf, etDate } from '../lib/nhl.js';
 import { gameStats } from '../lib/fstats.js';
 import { query, sendJson } from '../lib/http.js';
+import { playersHandler } from '../lib/players.js';
 
 // GET /api/fstats?date=YYYY-MM-DD – fantasystatistik per spelare för dagens pågående/avslutade matcher.
 // Används av Matchup-vyn, som summerar veckans dagar och kopplar ihop med inklistrade trupper.
 export default async function handler(req, res) {
+  if (query(req).get('list') === 'players') return playersHandler(req, res);
   const q = query(req).get('date');
   const date = /^\d{4}-\d{2}-\d{2}$/.test(q || '') ? q : etDate();
   try {

@@ -33,7 +33,7 @@ export function initMatchup({ store, esc, onChange }) {
     msg: { me: '', opp: '' },
     picking: { me: false, opp: false }, // spelarväljaren öppen
     query: { me: '', opp: '' },
-    pool: null, // alla NHL-spelare (/api/players)
+    pool: null, // alla NHL-spelare (/api/fstats?list=players)
   };
 
   const visible = () => document.body.dataset.view === 'matchup';
@@ -368,7 +368,7 @@ export function initMatchup({ store, esc, onChange }) {
   async function loadPool() {
     if (m.pool) return;
     try {
-      const r = await fetch('/api/players');
+      const r = await fetch('/api/fstats?list=players');
       if (!r.ok) throw new Error(r.status);
       m.pool = (await r.json()).players;
     } catch { m.pool = null; m.error = 'Kunde inte hämta spelarlistan.'; }

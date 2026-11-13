@@ -150,7 +150,7 @@ test('plock och släpp: bara statistiken medan spelaren är i laget räknas', as
 });
 
 test('rosterPlayers: NHL-trupp till spelarlista', async () => {
-  const { rosterPlayers } = await import('../api/players.js');
+  const { rosterPlayers } = await import('../lib/players.js');
   const list = rosterPlayers('BOS', { forwards: [{ id: 1, firstName: { default: 'David' }, lastName: { default: 'Pastrnak' }, positionCode: 'R' }], defensemen: [], goalies: [{ id: 2, firstName: { default: 'Jeremy' }, lastName: { default: 'Swayman' }, positionCode: 'G' }] });
   assert.deepEqual(list, [{ id: 1, name: 'David Pastrnak', team: 'BOS', pos: 'RW' }, { id: 2, name: 'Jeremy Swayman', team: 'BOS', pos: 'G' }]);
 });
