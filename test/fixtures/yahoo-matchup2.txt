@@ -1,0 +1,1103 @@
+logo  84.80 
+The Estreeters
+Ulf
+1-5-0 | 9th
+Pos
+Player
+Fan Pts
+G
+A
+P
++/-
+PPG
+PPA
+SHG
+SHA
+GWG
+SOG
+FW
+FL
+HIT
+BLK
+C
+Nathan MacKinnonDTDPlayer Note
+COL - C
+1:00 am @ MTL
+1.10
+0
+0
+0
+0
+0
+0
+0
+0
+0
+5
+20
+14
+0
+0
+C
+Michael MisaPlayer Note
+SJ - C
+3:00 am @ UTA
+2.00
+0
+0
+0
+1
+0
+0
+0
+0
+0
+5
+4
+2
+1
+1
+C
+Pavel BuchnevichNo new player Notes
+STL - C,LW,RW
+1:00 am vs FLA
+0.50
+0
+0
+0
+0
+0
+0
+0
+0
+0
+5
+0
+2
+0
+1
+C
+Sidney CrosbyPlayer Note
+PIT - C
+1:00 am vs OTT
+0.10
+0
+0
+0
+-1
+0
+0
+0
+0
+0
+7
+14
+10
+0
+0
+LW
+Gabriel LandeskogPlayer Note
+COL - LW,RW
+1:00 am @ MTL
+7.90
+3
+0
+3
+-1
+1
+0
+0
+0
+1
+8
+1
+5
+5
+0
+LW
+Alex OvechkinNo new player Notes
+WSH - LW,RW
+1:00 am vs NJ
+1.50
+0
+1
+1
+0
+0
+0
+0
+0
+0
+2
+0
+0
+3
+0
+LW
+Gavin McKennaPlayer Note
+TOR - LW
+1:00 am vs EDM
+1.30
+0
+1
+1
+0
+0
+0
+0
+0
+0
+1
+0
+0
+0
+1
+LW
+Berkly CattonPlayer Note
+SEA - C,LW
+7:00 pm @ CAR
+0.00
+0
+0
+0
+-1
+0
+0
+0
+0
+0
+0
+10
+4
+0
+2
+RW
+Jake NeighboursNo new player Notes
+STL - LW,RW
+1:00 am vs FLA
+-0.20
+0
+0
+0
+-1
+0
+0
+0
+0
+0
+4
+1
+4
+3
+2
+RW
+Alex LaferrierePlayer Note
+LA - C,LW,RW
+4:00 am vs CGY
+-3.40
+0
+0
+0
+-5
+0
+0
+0
+0
+0
+6
+6
+10
+12
+1
+RW
+Lucas RaymondNew Player Note
+DET - RW 
+1:00 am @ TB
+6.70
+1
+2
+3
+2
+0
+0
+0
+0
+0
+5
+0
+0
+0
+1
+RW
+Zach HymanPlayer Note
+EDM - LW,RW
+1:00 am @ TOR
+6.30
+2
+0
+2
+1
+1
+0
+0
+0
+0
+4
+0
+1
+0
+0
+D
+Neal PionkPlayer Note
+WPG - D
+9:30 pm @ CHI
+2.10
+0
+0
+0
+1
+0
+0
+0
+0
+0
+6
+0
+0
+5
+0
+D
+Filip HronekNo new player Notes
+VAN - D
+0.60
+0
+0
+0
+-1
+0
+0
+0
+0
+0
+1
+0
+0
+7
+4
+D
+William BorgenNo new player Notes
+BOS - D
+1:00 am vs MIN
+1.80
+0
+1
+1
+0
+0
+0
+0
+0
+0
+4
+0
+0
+2
+1
+D
+Mattias EkholmPlayer Note
+EDM - D
+1:00 am @ TOR
+7.00
+0
+2
+2
+4
+0
+0
+0
+0
+0
+4
+0
+0
+0
+3
+Util
+William NylanderPlayer Note
+TOR - C,RW 
+1:00 am vs EDM
+-4.50
+0
+0
+0
+-5
+0
+0
+0
+0
+0
+1
+0
+0
+0
+2
+Util
+Vladislav GavrikovNo new player Notes
+NYR - D
+5.90
+0
+1
+1
+4
+0
+0
+0
+0
+0
+2
+0
+0
+3
+2
+BN
+Steven StamkosPlayer Note
+NSH - C,LW,RW
+6.70
+1
+1
+2
+2
+0
+0
+0
+0
+0
+5
+19
+9
+0
+1
+BN
+Jack EichelPlayer Note
+VGK - C 
+6.00
+1
+1
+2
+0
+1
+1
+0
+0
+0
+7
+24
+22
+1
+0
+BN
+Will CuylleNo new player Notes
+NYR - LW,RW
+2.50
+0
+0
+0
+1
+0
+0
+0
+0
+0
+4
+1
+1
+7
+2
+BN
+(Empty)
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+IR+
+Jared McCannIRNo new player Notes
+SEA - C,LW
+7:00 pm @ CAR
+0.00
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+IR+
+Kevin FialaPlayer Note
+LA - LW
+4:00 am vs CGY
+0.00
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+IR+
+Anthony ManthaIR-LTPlayer Note
+NJ - LW,RW
+1:00 am @ WSH
+0.00
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+--
+(Empty)
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+Pos
+Player
+Fan Pts
+W
+L
+GA
+SV
+SHO
+G
+Ilya SorokinPlayer Note
+NYI - G
+4:00 am @ ANA
+8.30
+1
+0
+4
+63
+0
+G
+Lukas DostalPlayer Note
+ANA - G
+4:00 am vs NYI
+0.00
+-
+-
+-
+-
+-
+BN
+Juuse SarosNew Player Note
+NSH - G
+19.00
+2
+0
+2
+70
+1
+BN
+Connor HellebuyckPlayer Note
+NJ - G
+1:00 am @ WSH
+5.60
+1
+0
+2
+26
+0
+logo  96.10 
+Yī Yī
+S
+4-2-0 | 4th
+Pos
+Player
+Fan Pts
+G
+A
+P
++/-
+PPG
+PPA
+SHG
+SHA
+GWG
+SOG
+FW
+FL
+HIT
+BLK
+C
+Auston MatthewsPlayer Note
+TOR - C 
+1:00 am vs EDM
+6.20
+1
+1
+2
+1
+0
+0
+0
+0
+0
+6
+20
+16
+4
+4
+C
+Nico HischierPlayer Note
+NJ - C
+1:00 am @ WSH
+-0.60
+0
+0
+0
+-1
+0
+0
+0
+0
+0
+1
+22
+22
+1
+1
+C
+Robert ThomasPlayer Note
+STL - C 
+1:00 am vs FLA
+2.70
+0
+2
+2
+1
+0
+0
+0
+0
+0
+2
+21
+26
+0
+0
+C
+Roope HintzPlayer Note
+DAL - C
+2:00 am vs BUF
+3.80
+1
+1
+2
+0
+0
+0
+0
+0
+0
+3
+7
+3
+1
+0
+LW
+JJ PeterkaPlayer Note
+BOS - LW,RW
+1:00 am vs MIN
+-2.70
+0
+0
+0
+-3
+0
+0
+0
+0
+0
+2
+0
+0
+1
+0
+LW
+Dylan HollowayNo new player Notes
+STL - C,LW
+1:00 am vs FLA
+4.00
+0
+1
+1
+1
+0
+0
+0
+0
+0
+8
+0
+1
+5
+4
+LW
+Ryan LeonardNew Player Note
+WSH - LW,RW
+1:00 am vs NJ
+2.30
+1
+0
+1
+-2
+1
+0
+0
+0
+0
+6
+0
+0
+5
+1
+LW
+Matvei MichkovNo new player Notes
+PHI - LW,RW
+1:00 am @ CBJ
+3.30
+0
+2
+2
+0
+0
+1
+0
+0
+0
+2
+0
+1
+2
+0
+RW
+Jimmy SnuggerudPlayer Note
+STL - RW
+1:00 am vs FLA
+5.40
+1
+1
+2
+1
+0
+0
+0
+0
+1
+3
+0
+0
+1
+0
+RW
+Sam ReinhartNew Player Note
+FLA - C,RW
+1:00 am @ STL
+9.90
+2
+0
+2
+5
+0
+0
+0
+0
+0
+7
+9
+11
+2
+1
+RW
+Kent JohnsonPlayer Note
+CBJ - LW,RW
+1:00 am vs PHI
+-1.60
+0
+1
+1
+-4
+0
+1
+0
+0
+0
+4
+0
+0
+0
+0
+RW
+Brandon HagelPlayer Note
+TB - LW,RW
+1:00 am vs DET
+18.30
+4
+2
+6
+7
+0
+0
+0
+0
+0
+11
+0
+1
+1
+1
+D
+Shayne GostisbeherePlayer Note
+CAR - D
+7:00 pm vs SEA
+0.50
+0
+0
+0
+0
+0
+0
+0
+0
+0
+3
+0
+0
+0
+1
+D
+Devon ToewsPlayer Note
+COL - D
+1:00 am @ MTL
+9.30
+1
+2
+3
+4
+0
+1
+0
+0
+0
+2
+0
+0
+1
+0
+D
+John CarlsonPlayer Note
+TB - D
+1:00 am vs DET
+16.00
+1
+5
+6
+6
+1
+1
+0
+0
+0
+4
+0
+0
+0
+3
+D
+Josh MorrisseyPlayer Note
+WPG - D
+9:30 pm @ CHI
+7.70
+0
+1
+1
+5
+0
+0
+0
+0
+0
+6
+0
+0
+1
+5
+Util
+Elias LindholmNew Player Note
+BOS - C
+1:00 am vs MIN
+5.30
+0
+2
+2
+2
+0
+0
+0
+0
+0
+2
+13
+5
+1
+1
+Util
+Tristan LuneauPlayer Note
+ANA - D
+4:00 am vs NYI
+-0.70
+0
+0
+0
+-1
+0
+0
+0
+0
+0
+0
+0
+0
+1
+1
+BN
+Dylan StromeNo new player Notes
+WSH - C
+1:00 am vs NJ
+-2.10
+0
+1
+1
+-3
+0
+0
+0
+0
+0
+2
+16
+21
+0
+1
+BN
+Tomas HertlPlayer Note
+VGK - C,LW
+3.90
+0
+2
+2
+1
+0
+0
+0
+0
+0
+4
+15
+12
+2
+0
+BN
+Troy TerryPlayer Note
+ANA - RW
+4:00 am vs NYI
+-2.70
+0
+0
+0
+-3
+0
+0
+0
+0
+0
+0
+0
+0
+1
+1
+BN
+Jake SandersonNo new player Notes
+OTT - D
+1:00 am @ PIT
+-2.10
+0
+0
+0
+-3
+0
+0
+0
+0
+0
+5
+0
+0
+0
+2
+IR+
+Matt SavoieIR-LTNo new player Notes
+EDM - C,RW
+1:00 am @ TOR
+0.00
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+IR+
+Kirill MarchenkoIRNo new player Notes
+TOR - LW,RW
+1:00 am vs EDM
+0.00
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+IR+
+(Empty)
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+--
+Gabriel VilardiPlayer Note
+WPG - C,RW
+9:30 pm @ CHI
+0.10
+0
+0
+0
+0
+0
+0
+0
+0
+0
+1
+2
+2
+0
+0
+Pos
+Player
+Fan Pts
+W
+L
+GA
+SV
+SHO
+G
+Andrei VasilevskiyPlayer Note
+TB - G 
+1:00 am vs DET
+5.30
+1
+0
+3
+28
+0
+G
+Devon LeviPlayer Note
+EDM - G
+1:00 am @ TOR
+6.30
+1
+0
+1
+28
+0
+BN
+Jeremy SwaymanNew Player Note
+BOS - G
+1:00 am vs MIN
+-1.70
+0
+1
+4
+13
+0
+BN
+(Empty)
+-
+-
+-
+-
+-
+-

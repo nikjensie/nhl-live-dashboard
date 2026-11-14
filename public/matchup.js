@@ -464,11 +464,11 @@ export function initMatchup({ store, esc, onChange }) {
       </li>`;
     }).join('');
     const pasted = new Date(r.pastedAt);
-    const when = `inklistrad ${pasted.toLocaleDateString('sv-SE', { weekday: 'short', day: 'numeric', month: 'numeric' })} ${pasted.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' })}`;
+    const when = Number.isNaN(pasted.getTime()) ? 'inlagd' : `inklistrad ${pasted.toLocaleDateString('sv-SE', { weekday: 'short', day: 'numeric', month: 'numeric' })} ${pasted.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' })}`;
     const stale = r.week && r.week !== weekOf(etToday()).start
       ? '<p class="mu-msg warn">Truppen är från en tidigare vecka – klistra in veckans matchup.</p>' : '';
     return `<section class="mu-team ${side}">
-      <header><span class="mu-dot"></span><div class="mu-tt"><h3>${esc(r.team || label)}</h3><span>${label} · ${when}</span></div>
+      <header><span class="mu-dot"></span><div class="mu-tt"><h3>${esc(r.team || label)}</h3><span>${label} · ${when}${hasBase(r) ? ` · Yahoo ${r.total.toFixed(2)} p` : ' · <b class="mu-nobase" title="Klistra in Yahoos matchup-sida för att utgå från Yahoos poäng">utan Yahoos poäng</b>'}</span></div>
         <button class="mu-btn" data-pick="${side}">+ Spelare</button>
         <button class="mu-btn" data-edit="${side}">Klistra in nytt</button>
         <button class="mu-btn ghost" data-clear="${side}">Rensa</button></header>

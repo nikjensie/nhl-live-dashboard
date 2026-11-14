@@ -154,3 +154,11 @@ test('rosterPlayers: NHL-trupp till spelarlista', async () => {
   const list = rosterPlayers('BOS', { forwards: [{ id: 1, firstName: { default: 'David' }, lastName: { default: 'Pastrnak' }, positionCode: 'R' }], defensemen: [], goalies: [{ id: 2, firstName: { default: 'Jeremy' }, lastName: { default: 'Swayman' }, positionCode: 'G' }] });
   assert.deepEqual(list, [{ id: 1, name: 'David Pastrnak', team: 'BOS', pos: 'RW' }, { id: 2, name: 'Jeremy Swayman', team: 'BOS', pos: 'G' }]);
 });
+
+test('parsePaste: matchup-sidan utan "logo" (mobilkopiering) hittar ändå lagen och Yahoos poäng', async () => {
+  const { parsePaste } = await import('../public/roster.js');
+  for (const f of ['yahoo-matchup2.txt', 'yahoo-matchup2-nologo.txt']) {
+    const t = parsePaste(readFileSync(new URL(`./fixtures/${f}`, import.meta.url), 'utf8'));
+    assert.deepEqual(t.map((x) => [x.team, x.total, x.players.length]), [['The Estreeters', 84.8, 28], ['Yī Yī', 96.1, 28]], f);
+  }
+});

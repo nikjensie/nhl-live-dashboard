@@ -843,3 +843,4 @@ body[data-view="matchup"] .datenav { visibility: hidden; }
 .mu-league .mu-msg { margin: 10px 0 0; }
 .mu-ro .mu-x, .mu-ro [data-pick], .mu-ro [data-edit], .mu-ro [data-clear], .mu-ro .mu-paste, .mu-ro .mu-hint, .mu-ro .mu-picker { display: none !important; }
 @media (max-width: 900px) { .mu-view select, .mu-form input { font-size: 16px; } }
+.mu-nobase { color: var(--goal); font-weight: 700; }

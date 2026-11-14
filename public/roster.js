@@ -50,6 +50,7 @@ export const DEFAULT_G = ['W', 'GAA', 'SV%', 'SHO'];
 
 const SLOT = /^(C|LW|RW|F|W|D|Util|UTIL|G|BN|IR\+?|IL\+?|NA|SK|P|--)$/;
 const TEAMPOS = /^([A-Z]{2,4})\s*-\s*([A-Z]{1,2}(?:\s*,\s*[A-Z]{1,2})*)$/;
+const RECORD = /^\d+-\d+-\d+\s*\|\s*\d+(st|nd|rd|th)$/i; // "4-2-0 | 3rd"
 const BENCH = new Set(['BN', 'IR', 'IR+', 'IL', 'IL+', 'NA', '--']); // -- = släppt från laget
 
 /** "Nick SuzukiNew Player Note" / "Linus UllmarkDTDPlayer Note" -> { name, status } */
@@ -83,6 +84,13 @@ export function parsePaste(text) {
     if (logo) {
       newTeam({ total: Number(logo[1]), team: tok[i + 1] || '', manager: tok[i + 2] || '', record: /\|/.test(tok[i + 3] || '') ? tok[i + 3] : '' });
       i += cur.record ? 3 : 2;
+      inHeader = true; header = [];
+      continue;
+    }
+    // Utan "logo" (t.ex. kopierat i mobilen): poäng, lagnamn, manager och "1-5-0 | 9th"
+    if (RECORD.test(t) && i >= 2 && !TEAMPOS.test(tok[i - 1]) && !TEAMPOS.test(tok[i - 2])) {
+      const pts = /(?:^logo\s+)?(-?\d+\.\d+)$/i.exec(tok[i - 3] || '');
+      newTeam({ total: pts ? Number(pts[1]) : null, team: tok[i - 2], manager: tok[i - 1], record: t });
       inHeader = true; header = [];
       continue;
     }
