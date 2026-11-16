@@ -5,6 +5,7 @@ import { buildIndex, summarize } from './marks.js';
 import * as radio from './radio.js';
 import { initMatchup } from './matchup.js';
 import { initYLeague } from './yleague.js';
+import { initProfile } from './profile.js';
 
 const $ = (s, el = document) => el.querySelector(s);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -1269,6 +1270,9 @@ matchup = initMatchup({
   onChange() { rebuildMarks(); if (state.scores) renderAll(); },
 });
 rebuildMarks();
+// Profil (namn + PIN): synkar inställningar, ligor och valt lag mellan enheter
+const profile = initProfile({ store, esc });
+{ const set = store.set; store.set = (k, v) => { set(k, v); profile.changed(k); }; }
 matchup.init();
 // Fantasy-kolumnen från Yahoos publika ligasida (demo och ?fantasy använder den gamla)
 const yl = !FANTASY && !DEMO ? initYLeague({

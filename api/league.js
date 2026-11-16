@@ -17,6 +17,55 @@ const path = (id) => `leagues/${id}.json`;
 const noStore = { 'Cache-Control': 'private, no-store' };
 const validId = (id) => /^[A-Za-z0-9_-]{8,20}$/.test(String(id || ''));
 
+// Profiler: profiles/<slug>.json = { name, slug, pin (HMAC), settings, updatedAt, fails, lockedUntil }
+const ppath = (s) => `profiles/${s}.json`;
+function cleanSettings(o) {
+  if (!o || typeof o !== 'object') return {};
+  const json = JSON.stringify(o);
+  if (json.length > 20_000) throw new Error('För stora inställningar');
+  return Object.fromEntries(Object.entries(o).filter(([k]) => /^rs\.[A-Za-z.]{1,30}$/.test(k)).slice(0, 40));
+}
+async function profile(req, res, body) {
+  const { action } = body;
+  if (action === 'profile-create' || action === 'profile-login') {
+    const name = String(body.name || '').trim().slice(0, 30);
+    const s = slug(name);
+    if (s.length < 2) return sendJson(res, 400, { error: 'Ange ett namn (minst två tecken)' }, noStore);
+    if (!validPin(body.pin)) return sendJson(res, 400, { error: 'PIN ska vara 4–8 siffror' }, noStore);
+    const p = await readJson(ppath(s));
+    if (action === 'profile-create') {
+      if (p) return sendJson(res, 409, { error: 'Namnet är upptaget – logga in i stället, eller välj ett annat namn' }, noStore);
+      const np = { name, slug: s, pin: hashPin('profile', s, body.pin), settings: cleanSettings(body.settings), createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), fails: 0 };
+      await writeJson(ppath(s), np);
+      return sendJson(res, 200, { token: signToken({ p: s }), name, settings: np.settings }, noStore);
+    }
+    if (!p) return sendJson(res, 404, { error: 'Hittade ingen profil med det namnet' }, noStore);
+    if (p.lockedUntil && Date.now() < p.lockedUntil) {
+      return sendJson(res, 429, { error: `För många felaktiga försök – vänta ${Math.ceil((p.lockedUntil - Date.now()) / 60000)} min` }, noStore);
+    }
+    if (hashPin('profile', s, String(body.pin)) !== p.pin) {
+      p.fails = (p.fails || 0) + 1;
+      if (p.fails >= MAX_FAILS) { p.lockedUntil = Date.now() + LOCK_MS; p.fails = 0; }
+      await writeJson(ppath(s), p);
+      return sendJson(res, 403, { error: 'Fel PIN' }, noStore);
+    }
+    if (p.fails || p.lockedUntil) { p.fails = 0; delete p.lockedUntil; await writeJson(ppath(s), p); }
+    return sendJson(res, 200, { token: signToken({ p: s }), name: p.name, settings: p.settings || {} }, noStore);
+  }
+  // Resten kräver profiltoken
+  const tok = verifyToken(String(req.headers.authorization || '').replace(/^Bearer\s+/i, ''));
+  const p = tok?.p ? await readJson(ppath(tok.p)) : null;
+  if (!p) return sendJson(res, 401, { error: 'Inte inloggad' }, noStore);
+  if (action === 'profile-get') return sendJson(res, 200, { name: p.name, settings: p.settings || {}, updatedAt: p.updatedAt }, noStore);
+  if (action === 'profile-save') {
+    p.settings = { ...(p.settings || {}), ...cleanSettings(body.settings) };
+    p.updatedAt = new Date().toISOString();
+    await writeJson(ppath(p.slug), p);
+    return sendJson(res, 200, { ok: true, updatedAt: p.updatedAt }, noStore);
+  }
+  return sendJson(res, 400, { error: 'Okänd åtgärd' }, noStore);
+}
+
 async function readBody(req) {
   if (req.body && typeof req.body === 'object') return req.body;
   if (typeof req.body === 'string') return JSON.parse(req.body || '{}');
@@ -71,6 +120,9 @@ export default async function handler(req, res) {
 
     const body = await readBody(req);
     const { action } = body;
+
+    // ---- Profil: namn + PIN, inställningar som följer med mellan enheter ----
+    if (action?.startsWith('profile-')) return profile(req, res, body);
 
     if (action === 'create') {
       const name = String(body.name || '').trim().slice(0, 60);
