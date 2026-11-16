@@ -1,6 +1,7 @@
 import { readJson, writeJson } from '../lib/store.js';
 import { query, sendJson } from '../lib/http.js';
-import { parseLeaguePage, fetchLeaguePage } from '../lib/yleague.js';
+import { parseLeaguePage, fetchLeaguePage, textTokens } from '../lib/yleague.js';
+import { parsePaste } from '../public/roster.js';
 import {
   newId, slug, validPin, hashPin, signToken, verifyToken, publicLeague, cleanRoster, applySave, MAX_FAILS, LOCK_MS,
 } from '../lib/league.js';
@@ -31,6 +32,23 @@ export default async function handler(req, res) {
       // Yahoos publika ligasida -> veckans matchups. Cachas 5 minuter på Vercels edge.
       const y = query(req).get('yahoo');
       if (!/^\d{1,9}$/.test(y)) return sendJson(res, 400, { error: 'Ogiltigt lig-ID' }, noStore);
+      const teamId = query(req).get('team');
+      if (teamId) {
+        // Ett lags trupp (lagsidan) -> spelare med NHL-lag och plats, för markeringarna
+        if (!/^\d{1,3}$/.test(teamId)) return sendJson(res, 400, { error: 'Ogiltigt lag' }, noStore);
+        const tp = await fetchLeaguePage(y, teamId);
+        const toks = textTokens(tp.html);
+        if (query(req).get('debug') === '1') {
+          const i = toks.findIndex((t) => /^[A-Z]{2,4} - [A-Z]/.test(t));
+          return sendJson(res, 200, { status: tp.status, n: toks.length, tokens: toks.slice(Math.max(0, i - 60), i + 120) }, noStore);
+        }
+        const [team] = parsePaste(toks.join('\n'));
+        if (tp.status !== 200 || !team?.players?.length) {
+          return sendJson(res, 502, { error: tp.status === 200 ? 'Hittade ingen trupp' : `Yahoo svarade ${tp.status}` }, { 'Cache-Control': 'public, s-maxage=60' });
+        }
+        const players = team.players.map((p) => ({ name: p.name, team: p.team, pos: p.pos, slot: p.slot, active: p.active, goalie: p.goalie, status: p.status }));
+        return sendJson(res, 200, { id: teamId, players, fetchedAt: new Date().toISOString() }, { 'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=300' });
+      }
       const page = await fetchLeaguePage(y);
       if (query(req).get('debug') === '1') {
         const i = page.html.indexOf('matchup?week=');
