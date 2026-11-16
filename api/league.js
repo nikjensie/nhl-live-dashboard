@@ -1,5 +1,6 @@
 import { readJson, writeJson } from '../lib/store.js';
 import { query, sendJson } from '../lib/http.js';
+import { parseLeaguePage, fetchLeaguePage } from '../lib/yleague.js';
 import {
   newId, slug, validPin, hashPin, signToken, verifyToken, publicLeague, cleanRoster, applySave, MAX_FAILS, LOCK_MS,
 } from '../lib/league.js';
@@ -26,6 +27,21 @@ async function readBody(req) {
 
 export default async function handler(req, res) {
   try {
+    if (req.method === 'GET' && query(req).get('yahoo')) {
+      // Yahoos publika ligasida -> veckans matchups. Cachas 5 minuter på Vercels edge.
+      const y = query(req).get('yahoo');
+      if (!/^\d{1,9}$/.test(y)) return sendJson(res, 400, { error: 'Ogiltigt lig-ID' }, noStore);
+      const page = await fetchLeaguePage(y);
+      if (query(req).get('debug') === '1') {
+        const i = page.html.indexOf('matchup?week=');
+        return sendJson(res, 200, { status: page.status, url: page.url, length: page.html.length, title: (/<title>([^<]*)/i.exec(page.html) || [])[1], excerpt: page.html.slice(Math.max(0, i - 3000), i + 6000) }, noStore);
+      }
+      const data = parseLeaguePage(page.html, y);
+      if (page.status !== 200 || !data.matchups.length) {
+        return sendJson(res, 502, { error: page.status === 200 ? 'Hittade inga matchups – är ligan publik hos Yahoo?' : `Yahoo svarade ${page.status}` }, { 'Cache-Control': 'public, s-maxage=60' });
+      }
+      return sendJson(res, 200, { ...data, fetchedAt: new Date().toISOString() }, { 'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=300' });
+    }
     if (req.method === 'GET') {
       const id = query(req).get('id');
       if (!validId(id)) return sendJson(res, 400, { error: 'Ogiltig liga' }, noStore);
