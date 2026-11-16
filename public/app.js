@@ -4,6 +4,7 @@ import { unlock, isUnlocked, playHorn } from './horn.js';
 import { buildIndex, summarize } from './marks.js';
 import * as radio from './radio.js';
 import { initMatchup } from './matchup.js';
+import { initYLeague } from './yleague.js';
 
 const $ = (s, el = document) => el.querySelector(s);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -12,7 +13,8 @@ const DEMO = params.has('demo');
 // Yahoo-delen är dold tills Yahoo godkänt appen för Fantasy-API:et. Visa den med ?fantasy
 // Yahoo-kolumnen är dold: Yahoo nekar Fantasy-API:et (403) utanför USA/Kanada. Visa med ?fantasy.
 const FANTASY = params.has('fantasy');
-if (!FANTASY) document.body.classList.add('no-fantasy');
+// Utan ?fantasy: Fantasy-kolumnen visar ligan från Yahoos publika sida (yleague.js), ingen Yahoo-inloggning
+if (!FANTASY) document.body.classList.add('no-yahoo');
 
 const store = {
   get(k, d) { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch { return d; } },
@@ -184,7 +186,7 @@ function manualFantasy(r) {
 function rebuildMarks() {
   // Yahoo (inloggad, med trupper) går före inklistrade trupper
   const yahoo = state.fantasy?.loggedIn && state.fantasy.leagues?.some((l) => l.me?.players?.length) ? state.fantasy : null;
-  state.marks = buildIndex(yahoo || manualFantasy(matchup?.rosters()));
+  state.marks = buildIndex(yahoo || state.ylea || manualFantasy(matchup?.rosters()));
 }
 
 async function fetchFantasy() {
@@ -1233,7 +1235,7 @@ document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && state.bo
 
 $('#onlyMine').addEventListener('click', () => { state.onlyMine = !state.onlyMine; store.set('rs.onlyMine', state.onlyMine); renderGoals(); });
 $('#sortGoals').addEventListener('click', () => { state.asc = !state.asc; store.set('rs.goalOrderAsc', state.asc); renderGoals(); });
-document.addEventListener('visibilitychange', () => { if (!document.hidden) { fetchScores(); if (FANTASY || DEMO) fetchFantasy(); } });
+document.addEventListener('visibilitychange', () => { if (!document.hidden) { fetchScores(); if (FANTASY || DEMO) fetchFantasy(); yl?.refresh(); } });
 
 const auth = params.get('auth');
 if (auth) {
@@ -1253,6 +1255,12 @@ matchup = initMatchup({
 });
 rebuildMarks();
 matchup.init();
+// Fantasy-kolumnen från Yahoos publika ligasida (demo och ?fantasy använder den gamla)
+const yl = !FANTASY && !DEMO ? initYLeague({
+  store, esc,
+  onRosters(r) { state.ylea = r; rebuildMarks(); if (state.scores) renderAll(); },
+}) : null;
+yl?.start();
 if (matchup.openOnStart) setView('matchup');
 else try { const v = sessionStorage.getItem('rs.view'); if (v === 'week' || v === 'matchup') setView(v); } catch {}
 $('#games').innerHTML = `<div class="empty">Laddar…</div>`;

@@ -844,3 +844,31 @@ body[data-view="matchup"] .datenav { visibility: hidden; }
 .mu-ro .mu-x, .mu-ro [data-pick], .mu-ro [data-edit], .mu-ro [data-clear], .mu-ro .mu-paste, .mu-ro .mu-hint, .mu-ro .mu-picker { display: none !important; }
 @media (max-width: 900px) { .mu-view select, .mu-form input { font-size: 16px; } }
 .mu-nobase { color: var(--goal); font-weight: 700; }
+
+/* Fantasy-kolumnen: Yahoo-ligans matchups (publik ligasida) */
+body.no-yahoo #account { display: none !important; }
+.yl-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.yl-head > div { display: flex; flex-direction: column; gap: 2px; }
+.yl-head b { font-size: 14px; }
+.yl-head span { font-size: 11.5px; color: var(--muted); }
+.yl-pick { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
+.yl-pick select, .yl-form input { font: 13px var(--sans); color: var(--text); background: var(--bg-2); border: 1px solid var(--line-strong); border-radius: 8px; padding: 5px 8px; max-width: 170px; }
+.yl-mu { display: block; text-decoration: none; color: inherit; background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 4px 12px; }
+.yl-mu:hover { border-color: var(--line-hover); }
+.yl-mu.mine { border-color: color-mix(in srgb, var(--me) 55%, var(--line)); }
+.yl-team { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 7px 0; }
+.yl-team + .yl-team { border-top: 1px solid var(--line); }
+.yl-name { min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.yl-name b { font-size: 13.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.yl-name span { font-size: 11px; color: var(--dim); }
+.yl-pts { display: flex; flex-direction: column; align-items: flex-end; flex: none; }
+.yl-pts b { font: 700 19px/1 var(--num); color: var(--muted); }
+.yl-pts span { font-size: 11px; color: var(--dim); margin-top: 2px; }
+.yl-team.lead .yl-pts b { color: var(--text); }
+.yl-team.me .yl-name b, .yl-team.me .yl-pts b { color: var(--me); }
+.yl-team.opp .yl-name b, .yl-team.opp .yl-pts b { color: var(--opp); }
+.yl-foot { font-size: 11px; color: var(--dim); margin: 2px 0 0; }
+.yl-form { display: flex; flex-direction: column; gap: 8px; background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px; font-size: 13px; }
+.yl-form label { display: flex; flex-direction: column; gap: 4px; color: var(--muted); }
+.yl-form p { margin: 0; font-size: 12px; color: var(--dim); }
+@media (max-width: 900px) { .yl-pick select, .yl-form input { font-size: 16px; } }
