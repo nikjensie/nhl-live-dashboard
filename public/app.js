@@ -15,6 +15,9 @@ const DEMO = params.has('demo');
 const FANTASY = params.has('fantasy');
 // Utan ?fantasy: Fantasy-kolumnen visar ligan från Yahoos publika sida (yleague.js), ingen Yahoo-inloggning
 if (!FANTASY) document.body.classList.add('no-yahoo');
+// Matchup-fliken (inklistrade trupper) är avstängd tills vidare; visa med ?matchup
+const MATCHUP = params.has('matchup');
+if (!MATCHUP) document.body.classList.add('no-matchup');
 
 const store = {
   get(k, d) { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch { return d; } },
@@ -186,7 +189,7 @@ function manualFantasy(r) {
 function rebuildMarks() {
   // Yahoo (inloggad, med trupper) går före inklistrade trupper
   const yahoo = state.fantasy?.loggedIn && state.fantasy.leagues?.some((l) => l.me?.players?.length) ? state.fantasy : null;
-  state.marks = buildIndex(yahoo || state.ylea || manualFantasy(matchup?.rosters()));
+  state.marks = buildIndex(yahoo || state.ylea || (MATCHUP ? manualFantasy(matchup?.rosters()) : null));
 }
 
 async function fetchFantasy() {
@@ -1071,6 +1074,7 @@ function tick() {
 
 // ---------- Händelser ----------
 function setTab(tab) {
+  if (tab === 'matchup' && !MATCHUP) tab = 'games';
   state.tab = tab;
   document.body.dataset.tab = tab;
   setView(tab === 'week' || tab === 'matchup' ? tab : 'live', false);
@@ -1086,6 +1090,7 @@ const wkDate = new Intl.DateTimeFormat('sv-SE', { day: 'numeric', month: 'numeri
 const ymdDate = (ymd) => new Date(`${ymd}T12:00:00Z`);
 
 function setView(view, syncTab = true) {
+  if (view === 'matchup' && !MATCHUP) view = 'live';
   document.body.dataset.view = view;
   for (const b of document.querySelectorAll('.viewnav button')) b.classList.toggle('on', b.dataset.view === view);
   if (syncTab && window.matchMedia('(max-width: 900px)').matches) {
@@ -1261,7 +1266,7 @@ const yl = !FANTASY && !DEMO ? initYLeague({
   onRosters(r) { state.ylea = r; rebuildMarks(); if (state.scores) renderAll(); },
 }) : null;
 yl?.start();
-if (matchup.openOnStart) setView('matchup');
+if (matchup.openOnStart && MATCHUP) setView('matchup');
 else try { const v = sessionStorage.getItem('rs.view'); if (v === 'week' || v === 'matchup') setView(v); } catch {}
 $('#games').innerHTML = `<div class="empty">Laddar…</div>`;
 fetchScores();

@@ -876,3 +876,5 @@ body.no-yahoo #account { display: none !important; }
 .yl-form label { display: flex; flex-direction: column; gap: 4px; color: var(--muted); }
 .yl-form p { margin: 0; font-size: 12px; color: var(--dim); }
 @media (max-width: 900px) { .yl-pick select, .yl-form input { font-size: 16px; } }
+/* Matchup-fliken avstängd (visa med ?matchup) */
+body.no-matchup .viewnav [data-view="matchup"], body.no-matchup .tabbar [data-tab="matchup"] { display: none !important; }
