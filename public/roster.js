@@ -51,6 +51,10 @@ export const DEFAULT_G = ['W', 'GAA', 'SV%', 'SHO'];
 const SLOT = /^(C|LW|RW|F|W|D|Util|UTIL|G|BN|IR\+?|IL\+?|NA|SK|P|--)$/;
 const TEAMPOS = /^([A-Z]{2,4})\s*-\s*([A-Z]{1,2}(?:\s*,\s*[A-Z]{1,2})*)$/;
 const RECORD = /^\d+-\d+-\d+\s*\|\s*\d+(st|nd|rd|th)$/i; // "4-2-0 | 3rd"
+const NOTE = /^(No new player Notes?|New Player Notes?|Player Notes?)$/i;
+const STATUS = /^(DTD|IR-LT|IR-NR|IR|O|NA|SUSP|GTD|Q)$/;
+const NHL_TEAMS = new Set(['ANA', 'BOS', 'BUF', 'CAR', 'CBJ', 'CGY', 'CHI', 'COL', 'DAL', 'DET', 'EDM', 'FLA', 'LAK', 'MIN', 'MTL', 'NJD',
+  'NSH', 'NYI', 'NYR', 'OTT', 'PHI', 'PIT', 'SEA', 'SJS', 'STL', 'TBL', 'TOR', 'UTA', 'VAN', 'VGK', 'WPG', 'WSH', 'ARI']);
 const BENCH = new Set(['BN', 'IR', 'IR+', 'IL', 'IL+', 'NA', '--']); // -- = släppt från laget
 
 /** "Nick SuzukiNew Player Note" / "Linus UllmarkDTDPlayer Note" -> { name, status } */
@@ -98,15 +102,20 @@ export function parsePaste(text) {
     if (title) { const c = cur || newTeam(); c.team ||= title[1].trim(); c.date ||= title[2]; continue; }
     if (/^Starting Lineup Totals/i.test(t) || t === 'Pos') { inHeader = true; header = []; continue; }
     const tp = TEAMPOS.exec(t);
-    if (tp && i >= 1) {
-      const slot = i >= 2 && SLOT.test(tok[i - 2]) ? tok[i - 2] : '';
-      const { name, status } = cleanName(tok[i - 1]);
+    if (tp && i >= 1 && NHL_TEAMS.has(nhlAbbr(tp[1]))) {
+      // Bakåt: (plats) namn (skadestatus) (spelarnotis) – på webbsidan kan de vara egna celler
+      let j = i - 1, status = '';
+      while (j > 0 && (NOTE.test(tok[j]) || STATUS.test(tok[j]))) { if (STATUS.test(tok[j])) status ||= tok[j]; j--; }
+      const slot = j >= 1 && SLOT.test(tok[j - 1]) ? tok[j - 1] : '';
+      const cleaned = cleanName(tok[j]);
+      const name = cleaned.name;
+      status = cleaned.status || status;
       if (!name || SLOT.test(name)) continue;
       const pos = tp[2].replace(/\s/g, '').split(',');
       const goalie = pos.includes('G');
       if (inHeader) {
         // Rubrikerna slutar där första spelaren (plats + namn) börjar
-        sectionCats = header.filter((h) => h.i < i - (slot ? 2 : 1)).map((h) => h.cat);
+        sectionCats = header.filter((h) => h.i < j - (slot ? 1 : 0)).map((h) => h.cat);
         const into = goalie ? gCats : skCats;
         for (const c of sectionCats) if (!into.includes(c)) into.push(c);
         inHeader = false;
