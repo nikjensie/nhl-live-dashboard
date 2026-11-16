@@ -905,6 +905,16 @@ function setShowAll(on) {
   if (state.scores) { renderGames(); renderGoals(); renderHeader(); renderBox(); }
 }
 resultsToggle.addEventListener('change', () => setShowAll(resultsToggle.checked));
+
+// Skjutknappen "FH-matchups": visa/dölj Fantasy-kolumnen (och mobilfliken). Valet sparas.
+const fantasyToggle = $('#fantasyToggle');
+function applyFantasyVisible(on) {
+  fantasyToggle.checked = on;
+  document.body.classList.toggle('no-fantasy', !on);
+  if (!on && state.tab === 'fantasy') setTab('games');
+}
+applyFantasyVisible(store.get('rs.showFantasy', true));
+fantasyToggle.addEventListener('change', () => { store.set('rs.showFantasy', fantasyToggle.checked); applyFantasyVisible(fantasyToggle.checked); });
 document.addEventListener('click', (e) => { if (e.target.closest('[data-showall]')) setShowAll(true); });
 
 const predToggle = $('#predToggle');
