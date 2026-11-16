@@ -901,3 +901,4 @@ body.no-matchup .viewnav [data-view="matchup"], body.no-matchup .tabbar [data-ta
 .yl-dot.alt { background: var(--me2); }
 .yl-actions { display: flex; gap: 8px; }
 .yl-add { margin-top: 4px; }
+.yl-star { font-size: 13px; margin-right: 4px; vertical-align: 2px; }

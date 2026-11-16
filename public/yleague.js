@@ -74,14 +74,14 @@ export function initYLeague({ store, esc, onRosters }) {
   }
 
   const pts = (n) => (n == null ? '–' : n.toFixed(2));
-  function teamRow(L, i, t, other, mu) {
+  function teamRow(L, i, t, other, mu, top) {
     const mine = mu.teams.some((x) => String(x.id) === String(L.team));
     const side = String(t.id) === String(L.team) ? 'me' : mine ? 'opp' : '';
     const has = t.points != null && other.points != null && t.points !== other.points;
     const res = has ? (t.points > other.points ? ' win' : ' lose') : '';
     return `<div class="yl-team ${side}${side && i === 1 ? ' alt' : ''}${res}">
       <div class="yl-name"><b>${esc(t.name)}</b><span>${esc(t.record)}${t.rank ? ` · ${esc(t.rank)}` : ''}</span></div>
-      <div class="yl-pts"><b>${pts(t.points)}</b><span title="Yahoos prognos">${pts(t.proj)}</span></div>
+      <div class="yl-pts"><b>${t.points != null && t.points === top ? '<span class="yl-star" title="Veckans högsta poäng i ligan">⭐</span>' : ''}${pts(t.points)}</b><span title="Yahoos prognos">${pts(t.proj)}</span></div>
     </div>`;
   }
 
@@ -108,11 +108,14 @@ export function initYLeague({ store, esc, onRosters }) {
     }
     const mine = myMatchup(L);
     const list = [...L.data.matchups].sort((a, b) => (b === mine) - (a === mine));
+    // Veckans högsta poäng i ligan får en stjärna (alla vid delad topp)
+    const all = L.data.matchups.flatMap((m) => m.teams.map((t) => t.points)).filter((n) => n != null && n > 0);
+    const top = all.length ? Math.max(...all) : null;
     const at = new Date(L.data.fetchedAt).toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' });
     return `<section class="yl-league">${head(L.data.name || 'Ligan', `Vecka ${L.data.week ?? '–'}`)}
       ${L.error ? `<p class="mu-msg">${esc(L.error)}</p>` : ''}
       ${list.map((m) => `<a class="yl-mu${m === mine ? ` mine${i === 1 ? ' alt' : ''}` : ''}" href="${esc(m.url)}" target="_blank" rel="noopener">
-        ${teamRow(L, i, m.teams[0], m.teams[1], m)}${teamRow(L, i, m.teams[1], m.teams[0], m)}</a>`).join('')}
+        ${teamRow(L, i, m.teams[0], m.teams[1], m, top)}${teamRow(L, i, m.teams[1], m.teams[0], m, top)}</a>`).join('')}
       <p class="yl-foot">Från Yahoo kl. ${at} · <button class="textbtn" data-yl-edit="${i}">Byt liga</button>${y.leagues.length > 1 ? ` · <button class="textbtn" data-yl-remove="${i}">Ta bort</button>` : ''}</p>
     </section>`;
   }
