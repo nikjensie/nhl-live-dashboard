@@ -864,9 +864,13 @@ body.no-yahoo #account { display: none !important; }
 .yl-pts { display: flex; flex-direction: column; align-items: flex-end; flex: none; }
 .yl-pts b { font: 700 19px/1 var(--num); color: var(--muted); }
 .yl-pts span { font-size: 11px; color: var(--dim); margin-top: 2px; }
-.yl-team.lead .yl-pts b { color: var(--text); }
-.yl-team.me .yl-name b, .yl-team.me .yl-pts b { color: var(--me); }
-.yl-team.opp .yl-name b, .yl-team.opp .yl-pts b { color: var(--opp); }
+.yl-team.me .yl-name b { color: var(--me); }
+.yl-team.opp .yl-name b { color: var(--opp); }
+/* Leder: ljusgrön, ligger under: ljusröd */
+.yl-team.win .yl-pts b { color: #86efac; }
+.yl-team.lose .yl-pts b { color: #fca5a5; }
+:root[data-theme="light"] .yl-team.win .yl-pts b { color: #16a34a; }
+:root[data-theme="light"] .yl-team.lose .yl-pts b { color: #dc2626; }
 .yl-foot { font-size: 11px; color: var(--dim); margin: 2px 0 0; }
 .yl-form { display: flex; flex-direction: column; gap: 8px; background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px; font-size: 13px; }
 .yl-form label { display: flex; flex-direction: column; gap: 4px; color: var(--muted); }

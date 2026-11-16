@@ -59,8 +59,9 @@ export function initYLeague({ store, esc, onRosters }) {
   const pts = (n) => (n == null ? '–' : n.toFixed(2));
   function teamRow(t, other, mu) {
     const side = String(t.id) === String(y.team) ? 'me' : mu.teams.some((x) => String(x.id) === String(y.team)) ? 'opp' : '';
-    const lead = t.points != null && other.points != null && t.points > other.points;
-    return `<div class="yl-team ${side}${lead ? ' lead' : ''}">
+    const has = t.points != null && other.points != null && t.points !== other.points;
+    const res = has ? (t.points > other.points ? ' win' : ' lose') : '';
+    return `<div class="yl-team ${side}${res}">
       <div class="yl-name"><b>${esc(t.name)}</b><span>${esc(t.record)}${t.rank ? ` · ${esc(t.rank)}` : ''}</span></div>
       <div class="yl-pts"><b>${pts(t.points)}</b><span title="Yahoos prognos">${pts(t.proj)}</span></div>
     </div>`;
