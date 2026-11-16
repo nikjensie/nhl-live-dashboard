@@ -24,6 +24,11 @@
   --me-bg: rgba(251, 146, 60, 0.16);
   --opp: #7dd3fc;
   --opp-bg: rgba(125, 211, 252, 0.14);
+  /* Andra Yahoo-ligan: röd (mitt lag) och mörkblå (motståndare) */
+  --me2: #f87171;
+  --me2-bg: rgba(248, 113, 113, 0.16);
+  --opp2: #6b8cff;
+  --opp2-bg: rgba(79, 112, 255, 0.18);
   --win: #22c55e;
   --lose: #ef4444;
 
@@ -69,6 +74,10 @@
   --me-bg: rgba(249, 115, 22, 0.16);
   --opp: #0369a1;
   --opp-bg: rgba(14, 165, 233, 0.14);
+  --me2: #dc2626;
+  --me2-bg: rgba(220, 38, 38, 0.12);
+  --opp2: #1e3a8a;
+  --opp2-bg: rgba(30, 58, 138, 0.12);
   --win: #15803d;
   --lose: #dc2626;
 
@@ -878,3 +887,17 @@ body.no-yahoo #account { display: none !important; }
 @media (max-width: 900px) { .yl-pick select, .yl-form input { font-size: 16px; } }
 /* Matchup-fliken avstängd (visa med ?matchup) */
 body.no-matchup .viewnav [data-view="matchup"], body.no-matchup .tabbar [data-tab="matchup"] { display: none !important; }
+
+/* Andra ligan: röd / mörkblå */
+.fp.me.alt, .ft i.me.alt { color: var(--me2); background: var(--me2-bg); }
+.fp.opp.alt, .ft i.opp.alt { color: var(--opp2); background: var(--opp2-bg); }
+.fp.bench.alt { background: none; }
+.yl-team.me.alt .yl-name b { color: var(--me2); }
+.yl-team.opp.alt .yl-name b { color: var(--opp2); }
+.yl-mu.mine.alt { border-color: color-mix(in srgb, var(--me2) 55%, var(--line)); }
+.yl-league { display: flex; flex-direction: column; gap: 10px; }
+.yl-league + .yl-league { margin-top: 10px; padding-top: 12px; border-top: 1px solid var(--line); }
+.yl-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--me); margin-right: 6px; vertical-align: 1px; }
+.yl-dot.alt { background: var(--me2); }
+.yl-actions { display: flex; gap: 8px; }
+.yl-add { margin-top: 4px; }

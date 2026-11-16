@@ -47,7 +47,7 @@ export function buildIndex(fantasy) {
         const team = nhlAbbr(p.team);
         const first = p.first || String(p.name).split(' ')[0];
         const last = p.last || String(p.name).split(' ').slice(1).join(' ');
-        const entry = { side, league: l.name, tag: tags.get(l.key), active: p.active !== false, name: p.name };
+        const entry = { side, league: l.name, tag: tags.get(l.key), active: p.active !== false, name: p.name, alt: !!l.alt };
         push(byFull, `${team}|${norm(first)[0] || ''}|${norm(last)}`, entry);
         push(byLast, `${team}|${norm(last)}`, entry);
         size++;
@@ -78,5 +78,7 @@ export function summarize(hits) {
   if (!hits.length) return null;
   const side = hits.some((h) => h.side === 'me') ? 'me' : 'opp';
   const active = hits.some((h) => h.active);
-  return { side, active, hits };
+  // Färgen följer första ligan där spelaren har den sidan (liga 2 = röd/mörkblå)
+  const alt = !hits.some((h) => h.side === side && !h.alt);
+  return { side, active, alt, hits };
 }

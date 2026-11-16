@@ -470,8 +470,8 @@ function pn(team, name, display = name) {
   if (!m) return esc(display);
   const multi = state.marks.leagues > 1;
   const title = m.hits.map((h) => `${h.side === 'me' ? 'Ditt lag' : 'Motståndare'} – ${h.league}${h.active ? '' : ' (bänk/IR)'}`).join('\n');
-  const tags = multi ? `<sup class="ft">${m.hits.map((h) => `<i class="${h.side}">${esc(h.tag)}</i>`).join('')}</sup>` : '';
-  return `<span class="fp ${m.side}${m.active ? '' : ' bench'}" title="${esc(title)}">${esc(display)}</span>${tags}`;
+  const tags = multi ? `<sup class="ft">${m.hits.map((h) => `<i class="${h.side}${h.alt ? ' alt' : ''}">${esc(h.tag)}</i>`).join('')}</sup>` : '';
+  return `<span class="fp ${m.side}${m.alt ? ' alt' : ''}${m.active ? '' : ' bench'}" title="${esc(title)}">${esc(display)}</span>${tags}`;
 }
 
 /** Berör målet någon av mina eller motståndarens spelare (målgörare, assist eller på isen)? */

@@ -162,3 +162,14 @@ test('parsePaste: matchup-sidan utan "logo" (mobilkopiering) hittar ändå lagen
     assert.deepEqual(t.map((x) => [x.team, x.total, x.players.length]), [['The Estreeters', 84.8, 28], ['Yī Yī', 96.1, 28]], f);
   }
 });
+
+test('markeringar: andra ligan får alt-färg, första ligan går före', async () => {
+  const { buildIndex, summarize } = await import('../public/marks.js');
+  const idx = buildIndex({ leagues: [
+    { key: 'a', name: 'Trades R Us', me: { players: [{ name: 'Connor McDavid', team: 'EDM' }] }, opp: { players: [] } },
+    { key: 'b', name: 'Killingbird', alt: true, me: { players: [{ name: 'Nick Suzuki', team: 'MTL' }, { name: 'Connor McDavid', team: 'EDM' }] }, opp: { players: [{ name: 'Auston Matthews', team: 'TOR' }] } },
+  ] });
+  assert.equal(summarize(idx.lookup('MTL', 'Nick Suzuki')).alt, true);
+  assert.equal(summarize(idx.lookup('TOR', 'Auston Matthews')).side, 'opp');
+  assert.equal(summarize(idx.lookup('EDM', 'Connor McDavid')).alt, false);
+});
