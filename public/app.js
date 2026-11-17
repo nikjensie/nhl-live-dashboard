@@ -506,19 +506,19 @@ function onIceHtml(g) {
   return `<div class="pm">${row('plus', '+', c.scoringTeam, c.scoring)}${row('minus', '−', c.otherTeam, c.conceding)}${gkRows}</div>`;
 }
 
-/** Målvakterna längst ned: den som släppte in målet (eller tom bur) och målgörande lagets, med GA/SV/SO i matchen hittills. */
+/** Målvakten som släppte in målet (eller tom bur) längst ned, med GA/SV i matchen hittills. */
 function goalieRows(g, c, stats = {}) {
   if (!c) return '';
   const other = c.otherTeam || (g.team === g.away ? g.home : g.away);
   const line = (gk, team, conceded) => {
     if (!gk) return conceded ? `<div class="pm-row gk in"><b title="Målvakt">🥅</b><span class="pt">${esc(team)}</span><span class="pl"><span class="gk-en">Tom bur</span><span class="gk-tag">mål på</span></span></div>` : '';
     const st = stats[gk.id];
-    const so = st && st.ga === 0;
-    const nums = st ? `<span class="gks" title="I matchen hittills: insläppta mål, räddningar, hållen nolla">${st.ga} GA · ${st.sv} SV · ${so ? 1 : 0} SO</span>` : '';
+    const nums = st ? `<span class="gks" title="I matchen hittills: insläppta mål och räddningar">${st.ga} GA · ${st.sv} SV</span>` : '';
     return `<div class="pm-row gk${conceded ? ' in' : ''}"><b title="Målvakt">🥅</b><span class="pt">${esc(team)}</span><span class="pl"><span class="pn">${pn(team, gk.short || gk.name, gk.name)}</span>${conceded ? '<span class="gk-tag">mål på</span>' : ''}${nums}</span></div>`;
   };
   if (!('goalie' in c)) return '';
-  return line(c.goalie, other, true) + line(c.scoringGoalie, c.scoringTeam || g.team, false);
+  // Bara målvakten som släppte in målet (eller Tom bur)
+  return line(c.goalie, other, true);
 }
 
 // ---------- Render: fantasy ----------
