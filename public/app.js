@@ -419,9 +419,11 @@ function renderGoals() {
   for (const g of state.scores.games) { logos[g.away.abbrev] = g.away.logo; logos[g.home.abbrev] = g.home.logo; }
   const marked = state.marks.size > 0;
   $('#fLegend').hidden = !marked;
-  $('#onlyMine').hidden = !marked;
+  // "Bara matchups" bara när FH-matchups är påslaget – annars visas alla mål
+  const fhOn = !document.body.classList.contains('no-fantasy');
+  $('#onlyMine').hidden = !marked || !fhOn;
   $('#onlyMine').setAttribute('aria-pressed', String(state.onlyMine));
-  const filterOn = marked && state.onlyMine;
+  const filterOn = marked && fhOn && state.onlyMine;
   const hiddenGames = new Set(state.scores.games.filter(isHidden).map((g) => g.id));
   const note = $('#hiddenNote');
   note.hidden = !hiddenGames.size;
@@ -938,6 +940,7 @@ function applyFantasyVisible(on) {
   fantasyToggle.checked = on;
   document.body.classList.toggle('no-fantasy', !on);
   if (!on && state.tab === 'fantasy') setTab('games');
+  if (state.scores) renderGoals();
 }
 applyFantasyVisible(store.get('rs.showFantasy', true));
 fantasyToggle.addEventListener('change', () => { store.set('rs.showFantasy', fantasyToggle.checked); applyFantasyVisible(fantasyToggle.checked); });
