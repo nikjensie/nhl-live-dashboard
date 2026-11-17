@@ -511,10 +511,10 @@ function goalieRows(g, c, stats = {}) {
   if (!c) return '';
   const other = c.otherTeam || (g.team === g.away ? g.home : g.away);
   const line = (gk, team, conceded) => {
-    if (!gk) return conceded ? `<div class="pm-row gk in"><b title="Målvakt">🥅</b><span class="pt">${esc(team)}</span><span class="pl"><span class="gk-en">Tom bur</span><span class="gk-tag">mål på</span></span></div>` : '';
+    if (!gk) return conceded ? `<div class="pm-row gk in"><b title="Målvakt">🥅</b><span class="pt">${esc(team)}</span><span class="pl"><span class="gk-tag">mål på</span><span class="gk-en">Tom bur</span></span></div>` : '';
     const st = stats[gk.id];
     const nums = st ? `<span class="gks" title="I matchen hittills: insläppta mål och räddningar">${st.ga} GA · ${st.sv} SV</span>` : '';
-    return `<div class="pm-row gk${conceded ? ' in' : ''}"><b title="Målvakt">🥅</b><span class="pt">${esc(team)}</span><span class="pl"><span class="pn">${pn(team, gk.short || gk.name, gk.name)}</span>${conceded ? '<span class="gk-tag">mål på</span>' : ''}${nums}</span></div>`;
+    return `<div class="pm-row gk${conceded ? ' in' : ''}"><b title="Målvakt">🥅</b><span class="pt">${esc(team)}</span><span class="pl">${conceded ? '<span class="gk-tag">mål på</span>' : ''}<span class="pn">${pn(team, gk.short || gk.name, gk.name)}</span>${nums}</span></div>`;
   };
   if (!('goalie' in c)) return '';
   // Bara målvakten som släppte in målet (eller Tom bur)
