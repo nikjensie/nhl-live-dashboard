@@ -1,7 +1,7 @@
 import { nhlFetch } from '../lib/nhl.js';
 import { query, sendJson } from '../lib/http.js';
 
-// GET /api/boxscore?gameId=2026020218 – NHL:s officiella spelarstatistik för matchen (utespelare).
+// GET /api/boxscore?gameId=2026020218 – NHL:s officiella spelarstatistik för matchen (utespelare och målvakter).
 const txt = (v) => (v && typeof v === 'object' ? v.default ?? '' : v ?? '');
 const secs = (t) => { const m = /^(\d+):(\d{2})$/.exec(t || ''); return m ? +m[1] * 60 + +m[2] : 0; };
 
@@ -22,7 +22,18 @@ export function normalizeBoxscore(d) {
       toi: p.toi || null,
       toiSec: secs(p.toi),
     }));
-    return { abbrev: t.abbrev, skaters };
+    // Målvakter som har spelat: insläppta, räddningar, skott, hållen nolla
+    const used = (st.goalies || []).filter((p) => secs(p.toi) > 0);
+    const goalies = used.map((p) => {
+      const ga = p.goalsAgainst ?? 0;
+      const sa = p.shotsAgainst ?? 0;
+      return {
+        id: p.playerId, num: p.sweaterNumber ?? null, name: txt(p.name),
+        ga, sv: p.saves ?? Math.max(0, sa - ga), sa, decision: p.decision || null,
+        so: ga === 0 && used.length === 1 ? 1 : 0, toi: p.toi || null, starter: !!p.starter,
+      };
+    });
+    return { abbrev: t.abbrev, skaters, goalies };
   };
   return { gameId: d.id, state: d.gameState, away: team('awayTeam'), home: team('homeTeam') };
 }

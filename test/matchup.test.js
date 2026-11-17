@@ -173,3 +173,27 @@ test('markeringar: andra ligan får alt-färg, första ligan går före', async 
   assert.equal(summarize(idx.lookup('TOR', 'Auston Matthews')).side, 'opp');
   assert.equal(summarize(idx.lookup('EDM', 'Connor McDavid')).alt, false);
 });
+
+test('goalieStats och målvakter per mål', async () => {
+  const { goalieStats, computeOnIce } = await import('../lib/onice.js');
+  const pbp = {
+    id: 1, awayTeam: { id: 10, abbrev: 'BOS' }, homeTeam: { id: 20, abbrev: 'MTL' },
+    rosterSpots: [
+      { playerId: 1, teamId: 10, positionCode: 'G', firstName: { default: 'Jeremy' }, lastName: { default: 'Swayman' } },
+      { playerId: 2, teamId: 20, positionCode: 'G', firstName: { default: 'Sam' }, lastName: { default: 'Montembeault' } },
+      { playerId: 3, teamId: 20, positionCode: 'C', firstName: { default: 'Nick' }, lastName: { default: 'Suzuki' } },
+    ],
+    plays: [
+      { typeDescKey: 'shot-on-goal', periodDescriptor: { number: 1, periodType: 'REG' }, details: { goalieInNetId: 1 } },
+      { typeDescKey: 'goal', timeInPeriod: '05:00', situationCode: '1551', periodDescriptor: { number: 1, periodType: 'REG' }, details: { eventOwnerTeamId: 20, scoringPlayerId: 3, goalieInNetId: 1 } },
+      { typeDescKey: 'shot-on-goal', periodDescriptor: { number: 1, periodType: 'REG' }, details: { goalieInNetId: 2 } },
+    ],
+  };
+  const st = goalieStats(pbp);
+  assert.deepEqual([st[1].ga, st[1].sv, st[1].sa, st[1].team], [1, 1, 2, 'BOS']);
+  assert.deepEqual([st[2].ga, st[2].sv], [0, 1]);
+  const shifts = [{ typeCode: 517, playerId: 2, teamId: 20, period: 1, startTime: '00:00', endTime: '20:00' }];
+  const g = Object.values(computeOnIce(pbp, shifts))[0];
+  assert.equal(g.goalie.short, 'J. Swayman');
+  assert.equal(g.scoringGoalie.short, 'S. Montembeault');
+});

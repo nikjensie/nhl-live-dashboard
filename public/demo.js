@@ -151,6 +151,9 @@ export function demoOnIce(scores, gameId) {
       otherTeam: other,
       scoring: five(g.team, g.modifier === 'empty-net' ? 6 : 5),
       conceding: five(other, pp || g.strength === 'sh' ? 4 : 5),
+      // Demo: påhittade målvakter (tom bur vid empty-net-mål)
+      goalie: g.modifier === 'empty-net' ? null : { id: `${other}-g`, name: `${other} Målvakt`, short: `${other[0]}. Målvakt` },
+      scoringGoalie: { id: `${g.team}-g`, name: `${g.team} Målvakt`, short: `${g.team[0]}. Målvakt` },
     };
   }
   return out;
@@ -195,4 +198,17 @@ export function demoPredictions(scores) {
     };
   });
   return { games };
+}
+
+// Påhittad målvaktsstatistik för demoläget (samma form som /api/onice -> goalies)
+export function demoGoalies(scores, gameId) {
+  const g = scores.games.find((x) => x.id === gameId);
+  if (!g) return {};
+  const out = {};
+  for (const t of [g.away, g.home]) {
+    const ab = t.abbrev;
+    const ga = (ab === g.away.abbrev ? g.home.score : g.away.score) || 0;
+    out[`${ab}-g`] = { id: `${ab}-g`, team: ab, ga, sv: 18 + ga * 3, sa: 18 + ga * 4 };
+  }
+  return out;
 }
