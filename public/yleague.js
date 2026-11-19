@@ -3,11 +3,18 @@
 // motståndarens trupper (/api/league?yahoo=<id>&team=<n>) och spelarna markeras i appen:
 // liga 1 orange/ljusblå, liga 2 röd/mörkblå.
 
+import { nhlAbbr, splitName } from './marks.js';
+
 const REFRESH_MS = 5 * 60_000;
 const MAX = 2;
 
 export function initYLeague({ store, esc, onRosters }) {
-  const el = document.querySelector('#fantasy');
+  const root = document.querySelector('#fantasy');
+  // Sökrutan ligger utanför det som ritas om, så att fokus och text står kvar
+  if (root) root.innerHTML = `<div class="yl-search"><input type="search" data-yl-q placeholder="Sök spelare – vilket lag, FA eller waivers?" autocomplete="off" enterkeyhint="search"><ul class="yl-res" hidden></ul></div><div data-yl-body></div>`;
+  const el = root?.querySelector('[data-yl-body]');
+  const qEl = root?.querySelector('[data-yl-q]');
+  const resEl = root?.querySelector('.yl-res');
 
   // Sparade ligor: [{ id, team }]. Flytta över det gamla formatet (en liga).
   let saved = store.get('rs.yleagues', null);
@@ -174,6 +181,78 @@ export function initYLeague({ store, esc, onRosters }) {
     render();
     loadLeague(L);
   });
+
+  // ---- Spelarsök: ägare i varje liga, waivers eller free agent ----
+  const key = (team, name) => { const { init, last } = splitName(name); return `${nhlAbbr(team)}|${init}|${last}`; };
+  const lastKey = (team, name) => `${nhlAbbr(team)}|${splitName(name).last}`;
+  const norm = (x) => String(x || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  let pool = null, poolLoading = null;
+
+  async function loadSearchData() {
+    if (!pool) poolLoading ||= fetchJson('/api/fstats?list=players').then((j) => { pool = j.players; }).catch(() => { poolLoading = null; });
+    const jobs = [poolLoading];
+    for (const L of y.leagues) {
+      if (!L.data || (L.owners && Date.now() - L.ownersAt < REFRESH_MS) || L.ownersLoading) { jobs.push(L.ownersLoading); continue; }
+      L.ownersLoading = (async () => {
+        const teams = L.data.matchups.flatMap((m) => m.teams);
+        const owners = new Map(), byLast = new Map();
+        await Promise.all(teams.map(async (t) => {
+          try {
+            const { players } = await fetchJson(`/api/league?yahoo=${L.id}&team=${t.id}`);
+            for (const p of players) {
+              const v = { id: t.id, name: t.name, slot: p.slot };
+              owners.set(key(p.team, p.name), v);
+              byLast.set(lastKey(p.team, p.name), byLast.has(lastKey(p.team, p.name)) ? null : v);
+            }
+          } catch { /* laget hoppas över */ }
+        }));
+        const waivers = new Map();
+        try { for (const p of (await fetchJson(`/api/league?yahoo=${L.id}&waivers=1`)).players) waivers.set(key(p.team, p.name), p.until || ''); } catch { /* ingen waiverdata */ }
+        Object.assign(L, { owners, byLast, waivers, ownersAt: Date.now(), ownersLoading: null });
+      })();
+      jobs.push(L.ownersLoading);
+    }
+    await Promise.all(jobs);
+  }
+
+  function status(L, i, p) {
+    if (!L.owners) return '<span class="yl-st">…</span>';
+    const o = L.owners.get(key(p.team, p.name)) || L.byLast.get(lastKey(p.team, p.name));
+    const mu = myMatchup(L);
+    if (o) {
+      const side = String(o.id) === String(L.team) ? 'me' : mu?.teams.some((t) => String(t.id) === String(o.id)) ? 'opp' : '';
+      return `<span class="yl-st own ${side}${side && i === 1 ? ' alt' : ''}">${esc(o.name)}${o.slot === 'BN' ? ' <small>bänk</small>' : o.slot?.startsWith('IR') ? ' <small>IR</small>' : ''}</span>`;
+    }
+    if (L.waivers.has(key(p.team, p.name))) {
+      const d = L.waivers.get(key(p.team, p.name));
+      return `<span class="yl-st w" title="På waivers${d ? ` till ${esc(d)}` : ''}">W${d ? ` (${esc(d)})` : ''}</span>`;
+    }
+    return '<span class="yl-st fa" title="Free agent">FA</span>';
+  }
+
+  function renderResults() {
+    if (!resEl) return;
+    const q = norm(qEl.value).trim();
+    if (q.length < 2) { resEl.hidden = true; resEl.innerHTML = ''; return; }
+    resEl.hidden = false;
+    if (!pool) { resEl.innerHTML = '<li class="yl-none">Hämtar spelare…</li>'; return; }
+    const words = q.split(/\s+/);
+    const hits = pool.filter((p) => { const h = norm(`${p.name} ${p.team}`); return words.every((w) => h.includes(w)); }).slice(0, 8);
+    if (!hits.length) { resEl.innerHTML = '<li class="yl-none">Ingen spelare hittades.</li>'; return; }
+    resEl.innerHTML = hits.map((p) => `<li>
+      <div class="yl-pn"><b>${esc(p.name)}</b><span>${esc(p.team)} · ${esc(p.pos)}</span></div>
+      <div class="yl-sts">${y.leagues.map((L, i) => `<div class="yl-lst"><i class="yl-dot${i === 1 ? ' alt' : ''}" title="${esc(L.data?.name || L.id)}"></i>${status(L, i, p)}</div>`).join('')}</div>
+    </li>`).join('');
+  }
+
+  let qTimer = null;
+  qEl?.addEventListener('input', () => {
+    clearTimeout(qTimer);
+    renderResults();
+    qTimer = setTimeout(() => loadSearchData().then(renderResults), 150);
+  });
+  qEl?.addEventListener('focus', () => { loadSearchData().then(renderResults); });
+  qEl?.addEventListener('keydown', (e) => { if (e.key === 'Escape') { qEl.value = ''; renderResults(); } });
 
   return {
     start: load,

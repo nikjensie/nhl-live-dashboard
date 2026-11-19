@@ -90,7 +90,14 @@ export default async function handler(req, res) {
           return sendJson(res, 200, { status: wp.status, url: wp.url, n: toks.length, tokens: toks.slice(Math.max(0, i - 80), i + 160) }, noStore);
         }
         const [list] = parsePaste(toks.join('\n'));
-        const players = (list?.players || []).map((p) => ({ name: p.name, team: p.team, pos: p.pos }));
+        // Waiverdatum: "W (Nov 20)" står några celler efter "NSH - LW" – i samma ordning som spelarna
+        const dates = [];
+        toks.forEach((t, i) => {
+          if (!/^[A-Z]{2,4}\s*-\s*[A-Z]{1,2}(,[A-Z]{1,2})*$/.test(t)) return;
+          const w = toks.slice(i + 1, i + 6).map((x) => /^W \((.+)\)$/.exec(x)).find(Boolean);
+          dates.push(w ? w[1] : null);
+        });
+        const players = (list?.players || []).map((p, i) => ({ name: p.name, team: p.team, pos: p.pos, until: dates[i] || null }));
         return sendJson(res, 200, { players, fetchedAt: new Date().toISOString() }, { 'Cache-Control': 'public, s-maxage=600, stale-while-revalidate=600' });
       }
       const teamId = query(req).get('team');

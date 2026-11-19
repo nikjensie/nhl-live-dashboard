@@ -930,3 +930,28 @@ body.no-matchup .viewnav [data-view="matchup"], body.no-matchup .tabbar [data-ta
 .gk-dec { font-size: 9.5px; font-weight: 700; border-radius: 4px; padding: 0 4px; vertical-align: 1px; }
 .gk-dec.w { color: var(--pp); background: var(--pp-bg); }
 .gk-dec.l { color: var(--sh); background: var(--sh-bg); }
+
+/* Spelarsök i Fantasy-kolumnen */
+.yl-search { margin-bottom: 10px; }
+.yl-search input { width: 100%; box-sizing: border-box; font: 14px var(--sans); color: var(--text); background: var(--bg-2); border: 1px solid var(--line-strong); border-radius: 10px; padding: 8px 10px; }
+.yl-search input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+.yl-res { list-style: none; margin: 6px 0 0; padding: 0 10px; background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); }
+.yl-res li { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 7px 0; }
+.yl-res li + li { border-top: 1px solid var(--line); }
+.yl-res .yl-none { color: var(--dim); font-size: 12px; justify-content: flex-start; }
+.yl-pn { min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.yl-pn b { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.yl-pn span { font-size: 11px; color: var(--dim); }
+.yl-sts { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; flex: none; max-width: 60%; }
+.yl-lst { display: flex; align-items: center; gap: 5px; }
+.yl-lst .yl-dot { margin: 0; }
+.yl-st { font-size: 11.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px; }
+.yl-st small { font-weight: 500; color: var(--dim); }
+.yl-st.own { color: var(--text); }
+.yl-st.own.me { color: var(--me); }
+.yl-st.own.opp { color: var(--opp); }
+.yl-st.own.me.alt { color: var(--me2); }
+.yl-st.own.opp.alt { color: var(--opp2); }
+.yl-st.fa { color: var(--pp); background: var(--pp-bg); border-radius: 4px; padding: 0 5px; }
+.yl-st.w { color: var(--goal); background: var(--goal-bg); border-radius: 4px; padding: 0 5px; }
+@media (max-width: 900px) { .yl-search input { font-size: 16px; } }
