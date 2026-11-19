@@ -81,6 +81,18 @@ export default async function handler(req, res) {
       // Yahoos publika ligasida -> veckans matchups. Cachas 5 minuter på Vercels edge.
       const y = query(req).get('yahoo');
       if (!/^\d{1,9}$/.test(y)) return sendJson(res, 400, { error: 'Ogiltigt lig-ID' }, noStore);
+      if (query(req).get('waivers')) {
+        // Spelare på waivers (Yahoos spelarlista med status W)
+        const wp = await fetchLeaguePage(y, 'players?status=W&pos=P&sort=AR&sdir=1');
+        const toks = textTokens(wp.html);
+        if (query(req).get('debug') === '1') {
+          const i = toks.findIndex((t) => /^[A-Z]{2,4} - [A-Z]/.test(t));
+          return sendJson(res, 200, { status: wp.status, url: wp.url, n: toks.length, tokens: toks.slice(Math.max(0, i - 80), i + 160) }, noStore);
+        }
+        const [list] = parsePaste(toks.join('\n'));
+        const players = (list?.players || []).map((p) => ({ name: p.name, team: p.team, pos: p.pos }));
+        return sendJson(res, 200, { players, fetchedAt: new Date().toISOString() }, { 'Cache-Control': 'public, s-maxage=600, stale-while-revalidate=600' });
+      }
       const teamId = query(req).get('team');
       if (teamId) {
         // Ett lags trupp (lagsidan) -> spelare med NHL-lag och plats, för markeringarna
