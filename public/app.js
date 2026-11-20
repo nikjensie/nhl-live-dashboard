@@ -989,12 +989,13 @@ applyTheme();
 // ---------- Radio ----------
 const radioLinks = new Map(); // gameId -> { at, data }
 
-function notice(msg) {
+function notice(msg, ms = 5000) {
   const d = document.createElement('div');
   d.className = 'toast';
+  if (ms > 7000) d.style.animation = `toastin .35s ease, toastout .4s ease ${(ms - 400) / 1000}s forwards`;
   d.innerHTML = `<div class="t2">${esc(msg)}</div>`;
   $('#toasts').append(d);
-  setTimeout(() => d.remove(), 5000);
+  setTimeout(() => d.remove(), ms);
 }
 
 async function handleRadio(gameId, side) {
@@ -1305,6 +1306,7 @@ matchup.init();
 // Fantasy-kolumnen från Yahoos publika ligasida (demo och ?fantasy använder den gamla)
 const yl = !FANTASY && !DEMO ? initYLeague({
   store, esc,
+  onNotice: (m) => notice(m, 9000),
   onRosters(r) { state.ylea = r; rebuildMarks(); if (state.scores) renderAll(); },
 }) : null;
 yl?.start();

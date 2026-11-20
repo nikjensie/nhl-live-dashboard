@@ -8,7 +8,7 @@ import { nhlAbbr, splitName } from './marks.js';
 const REFRESH_MS = 5 * 60_000;
 const MAX = 2;
 
-export function initYLeague({ store, esc, onRosters }) {
+export function initYLeague({ store, esc, onRosters, onNotice }) {
   const root = document.querySelector('#fantasy');
   // Sökrutan ligger utanför det som ritas om, så att fokus och text står kvar
   if (root) root.innerHTML = `<div class="yl-search"><input type="search" data-yl-q placeholder="Sök spelare – vilket lag, FA eller waivers?" autocomplete="off" enterkeyhint="search"><ul class="yl-res" hidden></ul></div><div data-yl-body></div>`;
@@ -66,6 +66,7 @@ export function initYLeague({ store, esc, onRosters }) {
     try {
       L.data = await fetchJson(`/api/league?yahoo=${L.id}`);
       L.error = '';
+      milestones(L);
     } catch (e) {
       L.error = `Kunde inte hämta ligan från Yahoo: ${e.message}`;
     }
@@ -83,10 +84,40 @@ export function initYLeague({ store, esc, onRosters }) {
   const pts = (n) => (n == null ? '–' : n.toFixed(2));
   // Säsongens totalpoäng: Standings (uppdateras av Yahoo först på måndagar) + veckans poäng.
   // Har Yahoo inte hunnit räkna in förra veckan än visas bara Standings-siffran med en *.
+  function seasonTotal(t, week) {
+    if (t.season == null) return null;
+    const behind = !!(week && t.played != null && t.played < week - 1);
+    return { behind, total: behind ? t.season : t.season + (t.points || 0) };
+  }
+
+  // Notis när ett lags säsongstotal passerar 500, 1000, 1500 … Senast sedda nivå sparas per
+  // liga och lag, så att varje gräns bara aviseras en gång (första hämtningen sätter bara nivåerna).
+  const STEP = 500;
+  function milestones(L) {
+    const all = store.get('rs.ylMilestones', {}) || {};
+    const first = !all[L.id];
+    const seen = all[L.id] || {};
+    const fmt = (n) => n.toLocaleString('sv-SE');
+    for (const mu of L.data?.matchups || []) for (const t of mu.teams) {
+      const s = seasonTotal(t, mu.week);
+      if (!s) continue;
+      const level = Math.floor(s.total / STEP) * STEP;
+      const prev = seen[t.id];
+      if (prev == null || level > prev) {
+        if (!first && prev != null && level > 0 && !document.body.classList.contains('no-fantasy')) {
+          onNotice?.(`🏒 ${t.name} har passerat ${fmt(level)} poäng för säsongen (${L.data.name || `liga ${L.id}`})`);
+        }
+        seen[t.id] = level;
+      }
+    }
+    all[L.id] = seen;
+    store.set('rs.ylMilestones', all);
+  }
+
   function season(t, week) {
-    if (t.season == null) return '';
-    const behind = week && t.played != null && t.played < week - 1;
-    const total = behind ? t.season : t.season + (t.points || 0);
+    const st = seasonTotal(t, week);
+    if (!st) return '';
+    const { behind, total } = st;
     const tip = behind
       ? `Säsong ${pts(t.season)} enligt Yahoos Standings – förra veckan är inte inräknad än`
       : `Säsong: ${pts(t.season)} (Standings) + ${pts(t.points || 0)} denna vecka`;
