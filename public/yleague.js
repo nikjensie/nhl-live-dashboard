@@ -81,13 +81,25 @@ export function initYLeague({ store, esc, onRosters }) {
   }
 
   const pts = (n) => (n == null ? '–' : n.toFixed(2));
+  // Säsongens totalpoäng: Standings (uppdateras av Yahoo först på måndagar) + veckans poäng.
+  // Har Yahoo inte hunnit räkna in förra veckan än visas bara Standings-siffran med en *.
+  function season(t, week) {
+    if (t.season == null) return '';
+    const behind = week && t.played != null && t.played < week - 1;
+    const total = behind ? t.season : t.season + (t.points || 0);
+    const tip = behind
+      ? `Säsong ${pts(t.season)} enligt Yahoos Standings – förra veckan är inte inräknad än`
+      : `Säsong: ${pts(t.season)} (Standings) + ${pts(t.points || 0)} denna vecka`;
+    return ` · <span class="yl-season" title="${esc(tip)}">Σ ${total.toFixed(1)}${behind ? '*' : ''}</span>`;
+  }
+
   function teamRow(L, i, t, other, mu, top) {
     const mine = mu.teams.some((x) => String(x.id) === String(L.team));
     const side = String(t.id) === String(L.team) ? 'me' : mine ? 'opp' : '';
     const has = t.points != null && other.points != null && t.points !== other.points;
     const res = has ? (t.points > other.points ? ' win' : ' lose') : '';
     return `<div class="yl-team ${side}${side && i === 1 ? ' alt' : ''}${res}">
-      <div class="yl-name"><b>${esc(t.name)}</b><span>${esc(t.record)}${t.rank ? ` · ${esc(t.rank)}` : ''}</span></div>
+      <div class="yl-name"><b>${esc(t.name)}</b><span>${esc(t.record)}${t.rank ? ` · ${esc(t.rank)}` : ''}${season(t, mu.week)}</span></div>
       <div class="yl-pts"><b>${t.points != null && t.points === top ? '<span class="yl-star" title="Veckans högsta poäng i ligan">⭐</span>' : ''}${pts(t.points)}</b><span title="Yahoos prognos">${pts(t.proj)}</span></div>
     </div>`;
   }

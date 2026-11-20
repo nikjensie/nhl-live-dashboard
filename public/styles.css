@@ -873,6 +873,7 @@ body.no-yahoo #account { display: none !important; }
 .yl-pts { display: flex; flex-direction: column; align-items: flex-end; flex: none; }
 .yl-pts b { font: 700 19px/1 var(--num); color: var(--muted); }
 .yl-pts span { font-size: 11px; color: var(--dim); margin-top: 2px; }
+.yl-season { white-space: nowrap; font-variant-numeric: tabular-nums; }
 .yl-team.me .yl-name b { color: var(--me); }
 .yl-team.opp .yl-name b { color: var(--opp); }
 /* Leder: ljusgrön, ligger under: ljusröd */

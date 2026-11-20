@@ -37,3 +37,14 @@ test('cleanRoster tål skräp och begränsar storlek', () => {
   assert.equal(r.team.length, 60); assert.equal(r.players.length, 60);
   assert.deepEqual(r.players[0].stats, { G: 1 });
 });
+
+test('parseStandings läser säsongspoäng och spelade veckor', async () => {
+  const { parseStandings } = await import('../lib/yleague.js');
+  const html = `<table id="standingstable"><tbody>
+    <tr class="Linkable" data-target="/hockey/10098/8"><td><span>1</span></td><td><a href="/hockey/10098/8">Scott Foster's</a></td><td>6-1-0</td><td>.857</td><td>993.90</td><td>6</td><td>34</td></tr>
+    <tr class="Linkable" data-target="/hockey/10098/11"><td><span>10</span></td><td><a>Tomen HC</a></td><td>0-7-0</td><td>.000</td><td>782.50</td><td>7</td><td>6</td></tr>
+  </tbody></table>`;
+  const s = parseStandings(html, '10098');
+  assert.deepEqual(s[8], { points: 993.9, played: 7 });
+  assert.deepEqual(s[11], { points: 782.5, played: 7 });
+});
