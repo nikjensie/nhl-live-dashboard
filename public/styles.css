@@ -691,6 +691,8 @@ body[data-view="week"] .datenav { visibility: hidden; } /* behåll toppradens la
 .gk-st { font-size: 10px; font-weight: 700; padding: 1px 5px; border-radius: 4px; color: var(--dim); background: var(--card-2); }
 .gk-st.ok { color: var(--pp); background: var(--pp-bg); }
 .box-pred .back { color: var(--pp); font-size: 11.5px; }
+.box-pred a.src { font-size: 10.5px; color: var(--dim); text-decoration: underline dotted; text-underline-offset: 2px; margin-left: 2px; white-space: nowrap; }
+.box-pred a.src:hover { color: var(--accent); }
 .h2h, .fac { list-style: none; margin: 0; padding: 0; font-size: 12.5px; display: flex; flex-direction: column; gap: 3px; }
 .fac .ft-team { font: 700 12px/1 var(--num); color: var(--muted); margin-right: 3px; }
 .fac .eff { font-size: 11px; font-weight: 700; margin-left: 4px; }

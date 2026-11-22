@@ -867,17 +867,23 @@ function predDetails(g, compact = false) {
     if (!x) return '<span class="none">ej känd</span>';
     return `${esc(x.name)}${x.sv != null ? ` <span class="dim">(${(x.sv * 100).toFixed(1)} %)</span>` : ''} <span class="gk-st ${x.confirmed ? 'ok' : ''}">${x.confirmed ? 'bekräftad' : 'trolig'}</span>`;
   };
+  // Källa per skada (ESPN:s spelarkort) – saknas i äldre sparade prognoser
+  const srcTip = (x) => [x.type, x.date && `rapporterad ${x.date}`, x.returnDate && `väntas tillbaka ${x.returnDate}`].filter(Boolean).join(' · ');
+  const srcLink = (x) => (x && /^https:\/\//.test(x.url)
+    ? ` <a class="src" href="${esc(x.url)}" target="_blank" rel="noopener" title="${esc(['Källa: ESPN', srcTip(x)].filter(Boolean).join(' – '))}">källa</a>` : '');
   const inj = (t) => {
     const x = p.injuries?.[t.abbrev] || { out: [], back: [] };
+    const src = new Map((x.sources || []).map((s) => [s.name, s]));
+    const names = (list) => list.map((n) => `${esc(n)}${srcLink(src.get(n))}`).join(', ');
     const parts = [];
-    if (x.out.length) parts.push(`<span class="dim">Saknas:</span> ${x.out.map(esc).join(', ')}`);
-    if (x.back.length) parts.push(`<span class="back">Tillbaka:</span> ${x.back.map(esc).join(', ')}`);
+    if (x.out.length) parts.push(`<span class="dim">Saknas:</span> ${names(x.out)}`);
+    if (x.back.length) parts.push(`<span class="back">Tillbaka:</span> ${names(x.back)}`);
     return parts.join('<br>') || '<span class="none">Inga kända skador</span>';
   };
   const h2h = p.h2h?.n
     ? `<ul class="h2h">${p.h2h.games.map((m) => `<li><span class="dim">${esc(m.date)}</span> ${esc(m.away)} ${m.as}–${m.hs} ${esc(m.home)}${m.so ? ' (SO)' : m.ot ? ' (OT)' : ''}</li>`).join('')}</ul>`
     : '<span class="none">Inga möten de två senaste säsongerna</span>';
-  const fac = (p.factors || []).slice(0, 8).map((f) => `<li><span class="ft-team">${esc(f.team)}</span> ${esc(f.text)} <span class="eff ${f.effect > 0 ? 'pos' : f.effect < 0 ? 'neg' : ''}">${f.effect > 0 ? '+' : ''}${f.effect} %</span></li>`).join('');
+  const fac = (p.factors || []).slice(0, 8).map((f) => `<li><span class="ft-team">${esc(f.team)}</span> ${esc(f.text)}${(f.sources || []).map((x) => srcLink(x).replace('>källa<', f.sources.length > 1 ? `>källa ${esc(x.name.split(' ').pop())}<` : '>källa<')).join('')} <span class="eff ${f.effect > 0 ? 'pos' : f.effect < 0 ? 'neg' : ''}">${f.effect > 0 ? '+' : ''}${f.effect} %</span></li>`).join('');
   const r = predResult(g, p);
   const status = e.locked ? `Låst ${hm(e.lockAt)} (30 min före nedsläpp)` : `Preliminär, uppdaterad ${hm(e.updatedAt)} · nästa uppdatering inom 30 min · låses ${hm(e.lockAt)}`;
   return `<section class="box-pred ${compact ? 'compact' : ''}">

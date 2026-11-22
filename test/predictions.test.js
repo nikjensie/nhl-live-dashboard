@@ -54,9 +54,9 @@ test('parseProbables och parseInjuries: ESPN-format till NHL-förkortningar', ()
     STL: { name: 'Joel Hofer', confirmed: false, status: 'Expected' },
   });
   const inj = parseInjuries({ injuries: [
-    { team: { abbreviation: 'DET' }, injuries: [{ status: 'Day-To-Day', athlete: { displayName: 'John Gibson' }, details: { returnDate: '2026-11-05' } }] },
+    { team: { abbreviation: 'DET' }, injuries: [{ status: 'Day-To-Day', date: '2026-11-03T18:00Z', athlete: { id: '1', displayName: 'John Gibson', links: [{ rel: ['playercard', 'desktop'], href: 'https://www.espn.com/nhl/player/_/id/1' }] }, details: { type: 'Lower Body', returnDate: '2026-11-05' } }] },
   ] });
-  assert.deepEqual(inj, { DET: [{ name: 'John Gibson', status: 'Day-To-Day', returnDate: '2026-11-05' }] });
+  assert.deepEqual(inj, { DET: [{ name: 'John Gibson', status: 'Day-To-Day', returnDate: '2026-11-05', url: 'https://www.espn.com/nhl/player/_/id/1', type: 'Lower Body', date: '2026-11-03' }] });
 });
 
 test('parseClubStats: utespelare och målvakter', () => {
