@@ -1322,3 +1322,34 @@ $('#games').innerHTML = `<div class="empty">Laddar…</div>`;
 fetchScores();
 if (FANTASY || DEMO) fetchFantasy();
 setInterval(tick, 1000);
+
+// ---------- Ny version ----------
+// En flik som står öppen länge kör annars gammal kod efter en uppdatering. Kolla filernas
+// ETag var 10:e minut; finns en ny version laddas sidan om när fliken blir aktiv igen,
+// och syns fliken redan visas en notis att trycka på.
+{
+  const FILES = ['app.js', 'styles.css', 'yleague.js', 'index.html'];
+  const sig = async () => (await Promise.all(FILES.map((f) => fetch(f, { method: 'HEAD', cache: 'no-store' })
+    .then((r) => r.headers.get('etag') || r.headers.get('last-modified') || '').catch(() => '')))).join('|');
+  let base = null, stale = false;
+  const check = async () => {
+    if (stale || DEMO) return;
+    const s = await sig();
+    if (!s.replace(/\|/g, '')) return;
+    if (base == null) { base = s; return; }
+    if (s === base) return;
+    stale = true;
+    if (document.hidden) return;
+    const d = document.createElement('button');
+    d.className = 'toast update';
+    d.innerHTML = '<div class="t2">Ny version av Rinkside – tryck för att ladda om</div>';
+    d.addEventListener('click', () => location.reload());
+    $('#toasts').append(d);
+  };
+  check();
+  setInterval(check, 10 * 60_000);
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) return;
+    if (stale) location.reload(); else check();
+  });
+}

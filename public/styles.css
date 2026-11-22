@@ -958,3 +958,4 @@ body.no-matchup .viewnav [data-view="matchup"], body.no-matchup .tabbar [data-ta
 .yl-st.fa { color: var(--pp); background: var(--pp-bg); border-radius: 4px; padding: 0 5px; }
 .yl-st.w { color: var(--goal); background: var(--goal-bg); border-radius: 4px; padding: 0 5px; }
 @media (max-width: 900px) { .yl-search input { font-size: 16px; } }
+.toast.update { animation: toastin .35s ease; pointer-events: auto; cursor: pointer; font: inherit; color: inherit; text-align: left; }
