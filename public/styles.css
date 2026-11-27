@@ -959,3 +959,6 @@ body.no-matchup .viewnav [data-view="matchup"], body.no-matchup .tabbar [data-ta
 .yl-st.w { color: var(--goal); background: var(--goal-bg); border-radius: 4px; padding: 0 5px; }
 @media (max-width: 900px) { .yl-search input { font-size: 16px; } }
 .toast.update { animation: toastin .35s ease; pointer-events: auto; cursor: pointer; font: inherit; color: inherit; text-align: left; }
+.gk-mask { width: 1.2em; height: 1.2em; vertical-align: -0.22em; }
+.gk-mask .shell { fill: currentColor; }
+.gk-mask .cage { fill: none; stroke: currentColor; stroke-width: 1.1; stroke-linejoin: round; }

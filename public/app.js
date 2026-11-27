@@ -11,6 +11,8 @@ const $ = (s, el = document) => el.querySelector(s);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const params = new URLSearchParams(location.search);
 const DEMO = params.has('demo');
+// Målvaktsmask (ikon för målvakten som målet gjordes på)
+const GK_MASK = '<svg class="gk-mask" viewBox="0 0 24 24" aria-hidden="true"><path class="shell" fill-rule="evenodd" d="M12 1.8C7.3 1.8 4.6 5 4.6 9.6c0 5.6 2.8 10.2 7.4 12.6 4.6-2.4 7.4-7 7.4-12.6 0-4.6-2.7-7.8-7.4-7.8zM7.4 8.2h9.2v3.6c0 3.2-1.7 5.9-4.6 7.6-2.9-1.7-4.6-4.4-4.6-7.6z"/><path class="cage" d="M7.4 8.2h9.2v3.6c0 3.2-1.7 5.9-4.6 7.6-2.9-1.7-4.6-4.4-4.6-7.6zM7.4 11.2h9.2M7.9 14.4h8.2M10.4 8.2v10M13.6 8.2v10"/></svg>';
 // Yahoo-delen är dold tills Yahoo godkänt appen för Fantasy-API:et. Visa den med ?fantasy
 // Yahoo-kolumnen är dold: Yahoo nekar Fantasy-API:et (403) utanför USA/Kanada. Visa med ?fantasy.
 const FANTASY = params.has('fantasy');
@@ -513,10 +515,10 @@ function goalieRows(g, c, stats = {}) {
   if (!c) return '';
   const other = c.otherTeam || (g.team === g.away ? g.home : g.away);
   const line = (gk, team, conceded) => {
-    if (!gk) return conceded ? `<div class="pm-row gk in"><b title="Målvakt">🥅</b><span class="pt">${esc(team)}</span><span class="pl"><span class="gk-tag">mål på</span><span class="gk-en">Tom bur</span></span></div>` : '';
+    if (!gk) return conceded ? `<div class="pm-row gk in"><b title="Målvakt">${GK_MASK}</b><span class="pt">${esc(team)}</span><span class="pl"><span class="gk-tag">mål på</span><span class="gk-en">Tom bur</span></span></div>` : '';
     const st = stats[gk.id];
     const nums = st ? `<span class="gks" title="I matchen hittills: insläppta mål och räddningar">${st.ga} GA · ${st.sv} SV</span>` : '';
-    return `<div class="pm-row gk${conceded ? ' in' : ''}"><b title="Målvakt">🥅</b><span class="pt">${esc(team)}</span><span class="pl">${conceded ? '<span class="gk-tag">mål på</span>' : ''}<span class="pn">${pn(team, gk.short || gk.name, gk.name)}</span>${nums}</span></div>`;
+    return `<div class="pm-row gk${conceded ? ' in' : ''}"><b title="Målvakt">${GK_MASK}</b><span class="pt">${esc(team)}</span><span class="pl">${conceded ? '<span class="gk-tag">mål på</span>' : ''}<span class="pn">${pn(team, gk.short || gk.name, gk.name)}</span>${nums}</span></div>`;
   };
   if (!('goalie' in c)) return '';
   // Bara målvakten som släppte in målet (eller Tom bur)
